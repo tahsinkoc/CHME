@@ -1,6 +1,5 @@
 import { Collection } from './Collection'
 import { ingest as ingestCollection } from './ingest'
-import { query } from './query'
 import { generateAnswer } from './generateAnswer'
 import { callLLM } from './callLLM'
 
@@ -24,6 +23,19 @@ export class MemoryEngine {
     this.topK = options.topK ?? 5
     this.maxContextChars = options.maxContextChars ?? 2000
     this.temperature = options.temperature ?? 0
+
+    if (options.model !== undefined) {
+      this.setModel(options.model)
+    }
+    if (options.topK !== undefined) {
+      this.setTopK(options.topK)
+    }
+    if (options.maxContextChars !== undefined) {
+      this.setMaxContextChars(options.maxContextChars)
+    }
+    if (options.temperature !== undefined) {
+      this.setTemperature(options.temperature)
+    }
   }
 
   createCollection(id: string): Collection {
@@ -56,25 +68,36 @@ export class MemoryEngine {
       throw new Error(`Collection not found: ${collectionId}`)
     }
 
-    await query(collection, question, this.topK)
     const prompt = await generateAnswer(collection, question, this.topK, this.maxContextChars)
     const maxTokens = Math.max(64, Math.min(1024, Math.floor(this.maxContextChars / 4)))
     return await callLLM(prompt, this.model, this.temperature, maxTokens)
   }
 
   setModel(model: string): void {
+    if (!model || model.trim().length === 0) {
+      throw new Error('Model must be a non-empty string')
+    }
     this.model = model
   }
 
   setTopK(topK: number): void {
+    if (!Number.isInteger(topK) || topK < 1) {
+      throw new Error('topK must be an integer >= 1')
+    }
     this.topK = topK
   }
 
   setMaxContextChars(chars: number): void {
+    if (!Number.isInteger(chars) || chars < 200) {
+      throw new Error('maxContextChars must be an integer >= 200')
+    }
     this.maxContextChars = chars
   }
 
   setTemperature(temp: number): void {
+    if (!Number.isFinite(temp) || temp < 0) {
+      throw new Error('temperature must be a number >= 0')
+    }
     this.temperature = temp
   }
 }

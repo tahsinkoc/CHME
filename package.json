@@ -1,4 +1,10 @@
 {
+  "scripts": {
+    "pipeline": "ts-node src/testPipeline.ts",
+    "verify": "ts-node src/verify.ts",
+    "test:ollama": "ts-node test/ollamaDetailedTest.ts",
+    "test:ollama:dry": "ts-node test/ollamaDetailedTest.ts --dry-run"
+  },
   "devDependencies": {
     "@types/node": "^25.3.0"
   },

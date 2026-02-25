@@ -1,4 +1,4 @@
-const DEFAULT_MODEL = 'gpt-4'
+const DEFAULT_MODEL = 'qwen2.5:7b'
 const DEFAULT_TEMPERATURE = 0
 const DEFAULT_MAX_TOKENS = 300
 const DEFAULT_TIMEOUT_MS = 30000
@@ -10,7 +10,7 @@ export async function callLLM(
   maxTokens: number = DEFAULT_MAX_TOKENS
 ): Promise<string> {
   try {
-    const provider = (process.env.LLM_PROVIDER || 'openai').toLowerCase()
+    const provider = (process.env.LLM_PROVIDER || 'local').toLowerCase()
     if (provider === 'local') {
       return await callLocalModel(prompt, model, temperature, maxTokens)
     }

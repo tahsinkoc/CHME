@@ -1,8 +1,4 @@
-// @ts-ignore
 import { readdir, readFile } from 'node:fs/promises'
-// @ts-ignore
-import { DirEnt } from 'node:fs'
-// @ts-ignore
 import path from 'node:path'
 import { Collection, Node as MemoryNode } from './Collection'
 
@@ -110,7 +106,7 @@ async function collectMarkdownFiles(rootPath: string): Promise<string[]> {
 
 async function walk(currentPath: string, results: string[]): Promise<void> {
   const entries = await readdir(currentPath, { withFileTypes: true })
-  entries.sort((a: DirEnt, b: DirEnt) => a.name.localeCompare(b.name))
+  entries.sort((a, b) => a.name.localeCompare(b.name))
 
   for (const entry of entries) {
     const fullPath = path.join(currentPath, entry.name)
@@ -189,7 +185,7 @@ export function parseMarkdownToSections(fileContent: string): Section[] {
   return sections
 }
 
-export function chunkSection(section: { id: string; text?: string }): Chunk[] {
+export function chunkSection(section: Pick<Section, 'id' | 'text'>): Chunk[] {
   const text = section.text || ''
   if (text.length === 0) {
     return [{ id: `${section.id}:0`, parent: section.id, text: '' }]
@@ -230,7 +226,7 @@ function findChunkEnd(text: string, start: number, maxChars: number): number {
   for (let i = limit; i >= sentenceWindowStart; i--) {
     const ch = text[i]
     if (ch === '.' || ch === '!' || ch === '?' || ch === '\n') {
-      return i + 1
+      return i < limit ? i + 1 : limit
     }
   }
 
