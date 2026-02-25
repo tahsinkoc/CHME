@@ -1,0 +1,112 @@
+{
+  "queries": [
+    {
+      "id": "compliance_kyc_ownership",
+      "question": "Which controls verify customer identity and beneficial ownership during onboarding?",
+      "expectedPrimaryCollection": "compliance",
+      "acceptedCollections": ["compliance"],
+      "evidenceDocPrefixes": ["compliance__01-kyc-policy"],
+      "requiredEvidenceKeywords": ["identity", "beneficial", "ownership", "onboarding"],
+      "expectedAnswerKeywords": ["identity", "verification", "beneficial", "ownership", "controls"]
+    },
+    {
+      "id": "compliance_aml_escalation",
+      "question": "How does AML monitoring escalate alerts from unusual transaction patterns?",
+      "expectedPrimaryCollection": "compliance",
+      "acceptedCollections": ["compliance"],
+      "evidenceDocPrefixes": ["compliance__02-aml-monitoring"],
+      "requiredEvidenceKeywords": ["aml", "monitoring", "alerts", "transaction", "escalation"],
+      "expectedAnswerKeywords": ["aml", "alert", "triage", "escalation", "surveillance"]
+    },
+    {
+      "id": "compliance_sanctions_updates",
+      "question": "What process updates sanctions lists and resolves potential name matches?",
+      "expectedPrimaryCollection": "compliance",
+      "acceptedCollections": ["compliance"],
+      "evidenceDocPrefixes": ["compliance__03-sanctions-screening"],
+      "requiredEvidenceKeywords": ["sanctions", "lists", "name", "matches"],
+      "expectedAnswerKeywords": ["sanctions", "screening", "name", "match", "watchlist"]
+    },
+    {
+      "id": "compliance_chargeback_sanctions",
+      "question": "How are chargeback alerts with sanctions exposure escalated and documented?",
+      "expectedPrimaryCollection": "compliance",
+      "acceptedCollections": ["compliance", "payments"],
+      "evidenceDocPrefixes": ["compliance__03-sanctions-screening", "payments__04-chargeback-lifecycle"],
+      "requiredEvidenceKeywords": ["chargeback", "alerts", "sanctions", "documented"],
+      "expectedAnswerKeywords": ["chargeback", "sanctions", "escalation", "evidence", "documentation"]
+    },
+    {
+      "id": "payments_ledger_balance",
+      "question": "How does ledger posting enforce balanced double entry for each transaction?",
+      "expectedPrimaryCollection": "payments",
+      "acceptedCollections": ["payments"],
+      "evidenceDocPrefixes": ["payments__01-ledger-posting"],
+      "requiredEvidenceKeywords": ["ledger", "balanced", "double", "entry", "transaction"],
+      "expectedAnswerKeywords": ["ledger", "double", "entry", "balanced", "posting"]
+    },
+    {
+      "id": "payments_idempotency",
+      "question": "What is the idempotency key strategy for retrying customer payment requests?",
+      "expectedPrimaryCollection": "payments",
+      "acceptedCollections": ["payments"],
+      "evidenceDocPrefixes": ["payments__02-idempotency-keys"],
+      "requiredEvidenceKeywords": ["idempotency", "key", "retrying", "payment", "requests"],
+      "expectedAnswerKeywords": ["idempotency", "deduplication", "retry", "payment", "request"]
+    },
+    {
+      "id": "payments_settlement_breaks",
+      "question": "How are settlement breaks reconciled when provider files arrive late?",
+      "expectedPrimaryCollection": "payments",
+      "acceptedCollections": ["payments"],
+      "evidenceDocPrefixes": ["payments__03-settlement-reconciliation"],
+      "requiredEvidenceKeywords": ["settlement", "breaks", "reconciled", "provider", "late"],
+      "expectedAnswerKeywords": ["settlement", "reconciliation", "breaks", "provider", "exceptions"]
+    },
+    {
+      "id": "payments_chargeback_limit_signals",
+      "question": "How does chargeback handling coordinate with risk limit and fraud signals?",
+      "expectedPrimaryCollection": "payments",
+      "acceptedCollections": ["payments", "risk", "compliance"],
+      "evidenceDocPrefixes": ["payments__04-chargeback-lifecycle", "risk__04-limit-management", "risk__02-fraud-signals"],
+      "requiredEvidenceKeywords": ["chargeback", "risk", "limit", "fraud", "signals"],
+      "expectedAnswerKeywords": ["chargeback", "limits", "fraud", "signals", "coordination"]
+    },
+    {
+      "id": "risk_model_calibration",
+      "question": "How is the risk score model calibrated when false negatives increase?",
+      "expectedPrimaryCollection": "risk",
+      "acceptedCollections": ["risk"],
+      "evidenceDocPrefixes": ["risk__01-risk-score-model"],
+      "requiredEvidenceKeywords": ["risk", "score", "model", "calibrated", "false", "negatives"],
+      "expectedAnswerKeywords": ["risk", "model", "calibration", "threshold", "false negatives"]
+    },
+    {
+      "id": "risk_signal_aggregation",
+      "question": "Which fraud signals are aggregated before blocking a transaction?",
+      "expectedPrimaryCollection": "risk",
+      "acceptedCollections": ["risk"],
+      "evidenceDocPrefixes": ["risk__02-fraud-signals"],
+      "requiredEvidenceKeywords": ["fraud", "signals", "aggregated", "blocking", "transaction"],
+      "expectedAnswerKeywords": ["fraud", "signals", "aggregation", "blocking", "transaction"]
+    },
+    {
+      "id": "risk_velocity_controls",
+      "question": "How do velocity rules prevent rapid attack attempts without over blocking?",
+      "expectedPrimaryCollection": "risk",
+      "acceptedCollections": ["risk"],
+      "evidenceDocPrefixes": ["risk__03-velocity-rules"],
+      "requiredEvidenceKeywords": ["velocity", "rules", "rapid", "attack", "over", "blocking"],
+      "expectedAnswerKeywords": ["velocity", "rules", "window", "throttle", "blocking"]
+    },
+    {
+      "id": "risk_limit_exposure",
+      "question": "What steps reduce exposure when dynamic customer limits are near saturation?",
+      "expectedPrimaryCollection": "risk",
+      "acceptedCollections": ["risk"],
+      "evidenceDocPrefixes": ["risk__04-limit-management", "risk__05-incident-response"],
+      "requiredEvidenceKeywords": ["exposure", "dynamic", "customer", "limits", "saturation"],
+      "expectedAnswerKeywords": ["exposure", "limits", "override", "reduction", "saturation"]
+    }
+  ]
+}

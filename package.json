@@ -5,7 +5,9 @@
     "test:ollama": "ts-node test/ollamaDetailedTest.ts",
     "test:ollama:dry": "ts-node test/ollamaDetailedTest.ts --dry-run",
     "benchmark": "ts-node benchmark/benchmark.ts",
-    "benchmark:live": "ts-node benchmark/benchmark.ts --live-llm"
+    "benchmark:live": "ts-node benchmark/benchmark.ts --live-llm",
+    "benchmark:factual": "ts-node benchmark/factualBenchmark.ts",
+    "benchmark:factual:live": "ts-node benchmark/factualBenchmark.ts --live-llm-grading"
   },
   "devDependencies": {
     "@types/node": "^25.3.0"
