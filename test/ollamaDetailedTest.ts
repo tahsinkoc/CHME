@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import path from 'node:path'
 import { readdir } from 'node:fs/promises'
 import { MemoryEngine } from '../src/MemoryEngine'
-import { Node } from '../src/Collection'
 
 type Scenario = {
   name: string
@@ -49,17 +48,14 @@ async function main(): Promise<void> {
   engine.createCollection(collectionId)
   await engine.ingest(collectionId, testDir)
 
-  const collection = engine.getCollection(collectionId)
-  assert.ok(collection, 'Collection olusturulamadi')
-
-  const stats = summarizeTree(Array.from(collection.getAllNodes().values()))
+  const stats = engine.getCollectionStats(collectionId)
   assert.ok(stats.documents >= 5, 'Dokuman root sayisi 5 veya uzeri olmali')
   assert.ok(stats.sections > 0, 'Section node bulunamadi')
   assert.ok(stats.chunks > 0, 'Chunk node bulunamadi')
-  assert.ok(collection.getKeywordIndex().size > 0, 'Keyword index bos olmamali')
+  assert.ok(stats.keywords > 0, 'Keyword index bos olmamali')
 
   console.log('=== Detailed Memory Tool Test (Ollama: qwen2.5:7b) ===')
-  console.log(`Docs: ${stats.documents} | Sections: ${stats.sections} | Chunks: ${stats.chunks} | Keywords: ${collection.getKeywordIndex().size}`)
+  console.log(`Docs: ${stats.documents} | Sections: ${stats.sections} | Chunks: ${stats.chunks} | Keywords: ${stats.keywords}`)
   console.log('LLM Provider: local')
   console.log(`LLM URL: ${localUrl}`)
   console.log(`Model: qwen2.5:7b`)
@@ -96,24 +92,6 @@ async function main(): Promise<void> {
   }
 
   console.log('\nDetailed Ollama scenario test passed')
-}
-
-function summarizeTree(nodes: Node[]): { documents: number; sections: number; chunks: number } {
-  let documents = 0
-  let sections = 0
-  let chunks = 0
-
-  for (const node of nodes) {
-    if (node.depth === 0) {
-      documents += 1
-    } else if (node.depth === 1) {
-      sections += 1
-    } else if (node.depth === 2) {
-      chunks += 1
-    }
-  }
-
-  return { documents, sections, chunks }
 }
 
 main().catch((error: unknown) => {
