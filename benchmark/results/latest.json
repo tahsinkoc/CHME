@@ -1,0 +1,939 @@
+{
+  "runId": "2026-02-25T22-29-27-176Z",
+  "startedAt": "2026-02-25T22:29:27.176Z",
+  "finishedAt": "2026-02-25T22:41:30.204Z",
+  "durationMs": 723028,
+  "config": {
+    "iterations": 10,
+    "liveLlm": true,
+    "model": "qwen2.5:7b",
+    "provider": "local",
+    "dataRoot": "C:\\Users\\tahsi\\OneDrive\\Desktop\\GitFast\\CHME\\benchmark\\data",
+    "snapshotDir": "C:\\Users\\tahsi\\OneDrive\\Desktop\\GitFast\\CHME\\benchmark\\snapshots",
+    "outputPath": "C:\\Users\\tahsi\\OneDrive\\Desktop\\GitFast\\CHME\\benchmark\\results\\latest.json"
+  },
+  "dataset": {
+    "files": 15,
+    "collectionsDiscovered": [
+      "compliance",
+      "payments",
+      "risk"
+    ],
+    "expectedCollections": [
+      "compliance",
+      "payments",
+      "risk"
+    ],
+    "checks": {
+      "pass": true,
+      "missingExpectedCollections": [],
+      "invalidCollections": []
+    },
+    "stats": {
+      "compliance": {
+        "documents": 5,
+        "sections": 30,
+        "chunks": 50,
+        "nodes": 85,
+        "keywords": 206
+      },
+      "payments": {
+        "documents": 5,
+        "sections": 30,
+        "chunks": 50,
+        "nodes": 85,
+        "keywords": 215
+      },
+      "risk": {
+        "documents": 5,
+        "sections": 30,
+        "chunks": 50,
+        "nodes": 85,
+        "keywords": 201
+      }
+    }
+  },
+  "snapshot": {
+    "saveReport": {
+      "collections": 3,
+      "files": 4,
+      "snapshotDir": "C:\\Users\\tahsi\\OneDrive\\Desktop\\GitFast\\CHME\\benchmark\\snapshots"
+    },
+    "loadReport": {
+      "collectionsLoaded": 3,
+      "staleCollectionsReingested": [],
+      "filesChecked": 15
+    },
+    "timingMs": {
+      "ingest": 17.74,
+      "save": 10.89,
+      "load": 7.69
+    },
+    "roundtrip": {
+      "pass": true,
+      "mismatches": []
+    }
+  },
+  "determinism": {
+    "routePass": true,
+    "retrievePass": true,
+    "promptPass": true,
+    "primaryRoutePass": false,
+    "mismatches": {
+      "route": [],
+      "retrieve": [],
+      "prompt": []
+    }
+  },
+  "latency": {
+    "routeMs": {
+      "count": 120,
+      "mean": 0.05,
+      "p50": 0.04,
+      "p95": 0.08,
+      "min": 0.03,
+      "max": 0.21
+    },
+    "retrieveMs": {
+      "count": 120,
+      "mean": 0.09,
+      "p50": 0.09,
+      "p95": 0.15,
+      "min": 0.03,
+      "max": 0.4
+    },
+    "promptMs": {
+      "count": 120,
+      "mean": 0.07,
+      "p50": 0.06,
+      "p95": 0.15,
+      "min": 0.02,
+      "max": 0.28
+    },
+    "askMs": {
+      "count": 120,
+      "mean": 6024.56,
+      "p50": 5674.27,
+      "p95": 10511.43,
+      "min": 1467.93,
+      "max": 14315.63
+    }
+  },
+  "queries": [
+    {
+      "id": "compliance_kyc_ownership",
+      "question": "Which controls verify customer identity and beneficial ownership during onboarding?",
+      "expectedPrimary": "compliance",
+      "firstPrimaryCollection": "compliance",
+      "primaryMatch": true,
+      "crossCollection": false,
+      "firstRoute": [
+        "compliance",
+        "payments",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "compliance__01-kyc-policy:2:0",
+        "compliance__01-kyc-policy:1:0",
+        "compliance__01-kyc-policy:5:0",
+        "compliance__01-kyc-policy:3:0",
+        "compliance__01-kyc-policy:4:0"
+      ],
+      "firstPromptHash": "ae8d30bb7988dcfb714b567456b6b600ff4ea7dfe6ee6f514d72f87038d002c3",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.06,
+          "p50": 0.04,
+          "p95": 0.14,
+          "min": 0.04,
+          "max": 0.21
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.14,
+          "p50": 0.11,
+          "p95": 0.28,
+          "min": 0.1,
+          "max": 0.4
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.1,
+          "p50": 0.08,
+          "p95": 0.22,
+          "min": 0.07,
+          "max": 0.28
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 3341.86,
+          "p50": 2203.87,
+          "p95": 7866.35,
+          "min": 1845.89,
+          "max": 11257.92
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 511.3
+      }
+    },
+    {
+      "id": "compliance_aml_escalation",
+      "question": "How does AML monitoring escalate alerts from unusual transaction patterns?",
+      "expectedPrimary": "compliance",
+      "firstPrimaryCollection": "compliance",
+      "primaryMatch": true,
+      "crossCollection": false,
+      "firstRoute": [
+        "compliance",
+        "payments",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "compliance__02-aml-monitoring:4:0",
+        "compliance__01-kyc-policy:4:0",
+        "compliance__02-aml-monitoring:3:0",
+        "compliance__03-sanctions-screening:4:0",
+        "compliance__04-audit-trail-controls:4:0"
+      ],
+      "firstPromptHash": "e208a936a51a070352151fd9fdaaec746111f42e0d930cc7553a177ae04b113e",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.06,
+          "p50": 0.04,
+          "p95": 0.11,
+          "min": 0.03,
+          "max": 0.11
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.11,
+          "p50": 0.1,
+          "p95": 0.14,
+          "min": 0.08,
+          "max": 0.15
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.09,
+          "p50": 0.07,
+          "p95": 0.17,
+          "min": 0.06,
+          "max": 0.18
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 6470.48,
+          "p50": 6474.28,
+          "p95": 8169.81,
+          "min": 4499.15,
+          "max": 8328.11
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 1344
+      }
+    },
+    {
+      "id": "compliance_sanctions_updates",
+      "question": "What process updates sanctions lists and resolves potential name matches?",
+      "expectedPrimary": "compliance",
+      "firstPrimaryCollection": "compliance",
+      "primaryMatch": true,
+      "crossCollection": false,
+      "firstRoute": [
+        "compliance",
+        "payments",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "compliance__03-sanctions-screening:5:0",
+        "compliance__05-regulatory-reporting:3:0",
+        "compliance__01-kyc-policy:2:0",
+        "compliance__01-kyc-policy:3:0",
+        "compliance__01-kyc-policy:4:0"
+      ],
+      "firstPromptHash": "bbc6262bddaeadcc956a0859ca99ab10db9b91101af34652070362dc1e02d5c8",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.05,
+          "p50": 0.05,
+          "p95": 0.06,
+          "min": 0.03,
+          "max": 0.07
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.13,
+          "p50": 0.12,
+          "p95": 0.17,
+          "min": 0.09,
+          "max": 0.18
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.1,
+          "p50": 0.08,
+          "p95": 0.16,
+          "min": 0.06,
+          "max": 0.16
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 4535.99,
+          "p50": 4349.89,
+          "p95": 5854.61,
+          "min": 3088.7,
+          "max": 6292.36
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 1021.3
+      }
+    },
+    {
+      "id": "compliance_chargeback_sanctions",
+      "question": "How are chargeback alerts with sanctions exposure escalated and documented?",
+      "expectedPrimary": "compliance",
+      "firstPrimaryCollection": "compliance",
+      "primaryMatch": true,
+      "crossCollection": true,
+      "firstRoute": [
+        "compliance",
+        "payments",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "compliance__01-kyc-policy:3:0",
+        "compliance__02-aml-monitoring:3:0",
+        "compliance__03-sanctions-screening:3:0",
+        "compliance__04-audit-trail-controls:3:0",
+        "compliance__05-regulatory-reporting:3:0"
+      ],
+      "firstPromptHash": "2cda78f11f66d43659d1db6bf71a0b89195fff95473a89dc5df5c10db5b642b5",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.05,
+          "p50": 0.04,
+          "p95": 0.06,
+          "min": 0.03,
+          "max": 0.06
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.08,
+          "p50": 0.08,
+          "p95": 0.12,
+          "min": 0.06,
+          "max": 0.13
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.07,
+          "p50": 0.05,
+          "p95": 0.14,
+          "min": 0.04,
+          "max": 0.16
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 4630.75,
+          "p50": 3791.95,
+          "p95": 8100.47,
+          "min": 2748.69,
+          "max": 9319.8
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 996.3
+      }
+    },
+    {
+      "id": "payments_ledger_balance",
+      "question": "How does ledger posting enforce balanced double entry for each transaction?",
+      "expectedPrimary": "payments",
+      "firstPrimaryCollection": "payments",
+      "primaryMatch": true,
+      "crossCollection": false,
+      "firstRoute": [
+        "payments",
+        "compliance",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "payments__01-ledger-posting:2:0",
+        "payments__01-ledger-posting:3:0",
+        "payments__01-ledger-posting:1:0",
+        "payments__01-ledger-posting:5:0",
+        "payments__01-ledger-posting:4:0"
+      ],
+      "firstPromptHash": "1daac4de5718b25236c5196831c516d8fb27cf020a929e19da1573fdfa4bbfe5",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.05,
+          "p50": 0.05,
+          "p95": 0.08,
+          "min": 0.04,
+          "max": 0.09
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.11,
+          "p50": 0.1,
+          "p95": 0.15,
+          "min": 0.08,
+          "max": 0.15
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.09,
+          "p50": 0.09,
+          "p95": 0.14,
+          "min": 0.06,
+          "max": 0.15
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 4637.29,
+          "p50": 4317.18,
+          "p95": 6649.92,
+          "min": 2388.72,
+          "max": 6837.1
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 972.8
+      }
+    },
+    {
+      "id": "payments_idempotency",
+      "question": "What is the idempotency key strategy for retrying customer payment requests?",
+      "expectedPrimary": "payments",
+      "firstPrimaryCollection": "payments",
+      "primaryMatch": true,
+      "crossCollection": false,
+      "firstRoute": [
+        "payments",
+        "risk",
+        "compliance"
+      ],
+      "firstRetrievedNodeIds": [
+        "payments__02-idempotency-keys:2:0",
+        "payments__02-idempotency-keys:3:0",
+        "payments__02-idempotency-keys:4:0",
+        "payments__01-ledger-posting:3:0",
+        "payments__01-ledger-posting:4:0"
+      ],
+      "firstPromptHash": "39d1db4f7869997b2c7607c5ab8e9f7f8679416289e66c5930d2bf91efd778bc",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.04,
+          "p50": 0.04,
+          "p95": 0.07,
+          "min": 0.03,
+          "max": 0.09
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.1,
+          "p50": 0.1,
+          "p95": 0.15,
+          "min": 0.08,
+          "max": 0.15
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.08,
+          "p50": 0.07,
+          "p95": 0.11,
+          "min": 0.05,
+          "max": 0.12
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 5834.24,
+          "p50": 5379.01,
+          "p95": 8469.1,
+          "min": 3718.3,
+          "max": 8485.84
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 1172.4
+      }
+    },
+    {
+      "id": "payments_settlement_breaks",
+      "question": "How are settlement breaks reconciled when provider files arrive late?",
+      "expectedPrimary": "payments",
+      "firstPrimaryCollection": "payments",
+      "primaryMatch": true,
+      "crossCollection": false,
+      "firstRoute": [
+        "payments",
+        "risk",
+        "compliance"
+      ],
+      "firstRetrievedNodeIds": [
+        "payments__03-settlement-reconciliation:1:0",
+        "payments__03-settlement-reconciliation:2:0",
+        "payments__03-settlement-reconciliation:3:0",
+        "payments__03-settlement-reconciliation:4:0",
+        "payments__03-settlement-reconciliation:5:0"
+      ],
+      "firstPromptHash": "f482dda949afaa5e83c4c3a82e7a394a795cfd4421d7d160b81f3f3aeda3d48b",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.05,
+          "p50": 0.04,
+          "p95": 0.06,
+          "min": 0.04,
+          "max": 0.06
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.04,
+          "p50": 0.04,
+          "p95": 0.05,
+          "min": 0.03,
+          "max": 0.05
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.03,
+          "p50": 0.03,
+          "p95": 0.04,
+          "min": 0.03,
+          "max": 0.04
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 6989.31,
+          "p50": 7559.28,
+          "p95": 9587.18,
+          "min": 3321.88,
+          "max": 10241.07
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 1516.1
+      }
+    },
+    {
+      "id": "payments_chargeback_limit_signals",
+      "question": "How does chargeback handling coordinate with risk limit and fraud signals?",
+      "expectedPrimary": "payments",
+      "firstPrimaryCollection": "compliance",
+      "primaryMatch": false,
+      "crossCollection": true,
+      "firstRoute": [
+        "compliance",
+        "payments",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "compliance__01-kyc-policy:3:0",
+        "compliance__02-aml-monitoring:3:0",
+        "compliance__03-sanctions-screening:3:0",
+        "compliance__04-audit-trail-controls:3:0",
+        "compliance__05-regulatory-reporting:3:0"
+      ],
+      "firstPromptHash": "d1c35a0f4a8639dd2e953ad0e735a4896dca0f1768934c6ae053ff5715a50629",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.05,
+          "p50": 0.05,
+          "p95": 0.07,
+          "min": 0.04,
+          "max": 0.08
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.11,
+          "p50": 0.09,
+          "p95": 0.16,
+          "min": 0.08,
+          "max": 0.17
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.07,
+          "p50": 0.06,
+          "p95": 0.1,
+          "min": 0.05,
+          "max": 0.11
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 8148.79,
+          "p50": 8023.26,
+          "p95": 10466.37,
+          "min": 5310.46,
+          "max": 10765.72
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 1738.8
+      }
+    },
+    {
+      "id": "risk_model_calibration",
+      "question": "How is the risk score model calibrated when false negatives increase?",
+      "expectedPrimary": "risk",
+      "firstPrimaryCollection": "risk",
+      "primaryMatch": true,
+      "crossCollection": false,
+      "firstRoute": [
+        "risk",
+        "compliance"
+      ],
+      "firstRetrievedNodeIds": [
+        "risk__01-risk-score-model:1:0",
+        "risk__01-risk-score-model:3:0",
+        "risk__01-risk-score-model:4:0",
+        "risk__01-risk-score-model:2:0",
+        "risk__04-limit-management:4:0"
+      ],
+      "firstPromptHash": "76f4052f4db6f424f357c1d78d984b2f1328fe980468e416398c2d4d87a01e43",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.04,
+          "p50": 0.04,
+          "p95": 0.06,
+          "min": 0.03,
+          "max": 0.07
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.06,
+          "p50": 0.05,
+          "p95": 0.08,
+          "min": 0.04,
+          "max": 0.09
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.04,
+          "p50": 0.04,
+          "p95": 0.06,
+          "min": 0.03,
+          "max": 0.06
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 10475.55,
+          "p50": 10219.69,
+          "p95": 13146.52,
+          "min": 8780.52,
+          "max": 14315.63
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 2288.9
+      }
+    },
+    {
+      "id": "risk_signal_aggregation",
+      "question": "Which fraud signals are aggregated before blocking a transaction?",
+      "expectedPrimary": "risk",
+      "firstPrimaryCollection": "risk",
+      "primaryMatch": true,
+      "crossCollection": false,
+      "firstRoute": [
+        "risk",
+        "payments",
+        "compliance"
+      ],
+      "firstRetrievedNodeIds": [
+        "risk__02-fraud-signals:3:0",
+        "risk__05-incident-response:4:0",
+        "risk__01-risk-score-model:3:0",
+        "risk__01-risk-score-model:4:0",
+        "risk__02-fraud-signals:4:0"
+      ],
+      "firstPromptHash": "d576919fa09fa4618129745e7a578b4ef98a73a3d31913995859af2417e3de73",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.04,
+          "p50": 0.04,
+          "p95": 0.05,
+          "min": 0.03,
+          "max": 0.05
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.1,
+          "p50": 0.09,
+          "p95": 0.15,
+          "min": 0.07,
+          "max": 0.15
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.07,
+          "p50": 0.07,
+          "p95": 0.09,
+          "min": 0.05,
+          "max": 0.1
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 2545.91,
+          "p50": 2433.53,
+          "p95": 3717.18,
+          "min": 1467.93,
+          "max": 4043.97
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 513
+      }
+    },
+    {
+      "id": "risk_velocity_controls",
+      "question": "How do velocity rules prevent rapid attack attempts without over blocking?",
+      "expectedPrimary": "risk",
+      "firstPrimaryCollection": "risk",
+      "primaryMatch": true,
+      "crossCollection": false,
+      "firstRoute": [
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "risk__03-velocity-rules:4:0",
+        "risk__03-velocity-rules:1:0",
+        "risk__03-velocity-rules:3:0",
+        "risk__03-velocity-rules:5:0",
+        "risk__03-velocity-rules:3:1"
+      ],
+      "firstPromptHash": "1c59f4a388d7bca52f746b5393141b7353d84394a11fb1355d7933739a845237",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.04,
+          "p50": 0.04,
+          "p95": 0.05,
+          "min": 0.04,
+          "max": 0.06
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.04,
+          "p50": 0.03,
+          "p95": 0.04,
+          "min": 0.03,
+          "max": 0.04
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.03,
+          "p50": 0.03,
+          "p95": 0.06,
+          "min": 0.02,
+          "max": 0.07
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 8380,
+          "p50": 8180.83,
+          "p95": 10287.23,
+          "min": 6933.64,
+          "max": 10505.69
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 1893.3
+      }
+    },
+    {
+      "id": "risk_limit_exposure",
+      "question": "What steps reduce exposure when dynamic customer limits are near saturation?",
+      "expectedPrimary": "risk",
+      "firstPrimaryCollection": "risk",
+      "primaryMatch": true,
+      "crossCollection": false,
+      "firstRoute": [
+        "risk",
+        "compliance",
+        "payments"
+      ],
+      "firstRetrievedNodeIds": [
+        "risk__01-risk-score-model:3:0",
+        "risk__02-fraud-signals:3:0",
+        "risk__03-velocity-rules:3:0",
+        "risk__04-limit-management:3:0",
+        "risk__05-incident-response:3:0"
+      ],
+      "firstPromptHash": "a22a9f7dc8f595a9e7e9381d63b870e9b90e41d3d51505f09a4874101256d8a6",
+      "signaturesStable": {
+        "route": true,
+        "retrieve": true,
+        "prompt": true
+      },
+      "mismatches": [],
+      "latency": {
+        "routeMs": {
+          "count": 10,
+          "mean": 0.05,
+          "p50": 0.04,
+          "p95": 0.07,
+          "min": 0.04,
+          "max": 0.07
+        },
+        "retrieveMs": {
+          "count": 10,
+          "mean": 0.09,
+          "p50": 0.08,
+          "p95": 0.12,
+          "min": 0.07,
+          "max": 0.14
+        },
+        "promptMs": {
+          "count": 10,
+          "mean": 0.08,
+          "p50": 0.06,
+          "p95": 0.14,
+          "min": 0.05,
+          "max": 0.15
+        },
+        "askMs": {
+          "count": 10,
+          "mean": 6304.53,
+          "p50": 6050.79,
+          "p95": 9148.96,
+          "min": 3725.76,
+          "max": 9999.5
+        }
+      },
+      "liveAsk": {
+        "enabled": true,
+        "runs": 10,
+        "nonEmptyResponses": 10,
+        "emptyResponses": 0,
+        "avgAnswerChars": 1378.6
+      }
+    }
+  ],
+  "softWarnings": [],
+  "overallPass": true
+}
