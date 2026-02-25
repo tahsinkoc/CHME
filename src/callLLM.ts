@@ -3,18 +3,29 @@ const DEFAULT_TEMPERATURE = 0
 const DEFAULT_MAX_TOKENS = 300
 const DEFAULT_TIMEOUT_MS = 30000
 
+export type LLMProvider = 'local' | 'openai'
+
+export type LLMCallOptions = {
+  provider?: LLMProvider
+  localUrl?: string
+  openAIBaseUrl?: string
+  openAIApiKey?: string
+  timeoutMs?: number
+}
+
 export async function callLLM(
   prompt: string,
   model: string = DEFAULT_MODEL,
   temperature: number = DEFAULT_TEMPERATURE,
-  maxTokens: number = DEFAULT_MAX_TOKENS
+  maxTokens: number = DEFAULT_MAX_TOKENS,
+  options: LLMCallOptions = {}
 ): Promise<string> {
   try {
-    const provider = (process.env.LLM_PROVIDER || 'local').toLowerCase()
+    const provider = (options.provider || process.env.LLM_PROVIDER || 'local').toLowerCase()
     if (provider === 'local') {
-      return await callLocalModel(prompt, model, temperature, maxTokens)
+      return await callLocalModel(prompt, model, temperature, maxTokens, options)
     }
-    return await callOpenAICompatible(prompt, model, temperature, maxTokens)
+    return await callOpenAICompatible(prompt, model, temperature, maxTokens, options)
   } catch {
     return ''
   }
@@ -24,10 +35,11 @@ async function callOpenAICompatible(
   prompt: string,
   model: string,
   temperature: number,
-  maxTokens: number
+  maxTokens: number,
+  options: LLMCallOptions
 ): Promise<string> {
-  const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '')
-  const apiKey = process.env.OPENAI_API_KEY || ''
+  const baseUrl = (options.openAIBaseUrl || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '')
+  const apiKey = options.openAIApiKey ?? process.env.OPENAI_API_KEY ?? ''
 
   const response = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
     method: 'POST',
@@ -42,7 +54,7 @@ async function callOpenAICompatible(
       stream: false,
       messages: [{ role: 'user', content: prompt }]
     })
-  })
+  }, options.timeoutMs)
 
   if (!response.ok) {
     return ''
@@ -76,9 +88,10 @@ async function callLocalModel(
   prompt: string,
   model: string,
   temperature: number,
-  maxTokens: number
+  maxTokens: number,
+  options: LLMCallOptions
 ): Promise<string> {
-  const url = process.env.LOCAL_LLM_URL || 'http://localhost:11434/api/generate'
+  const url = options.localUrl || process.env.LOCAL_LLM_URL || 'http://localhost:11434/api/generate'
 
   const response = await fetchWithTimeout(url, {
     method: 'POST',
@@ -93,7 +106,7 @@ async function callLocalModel(
       num_predict: maxTokens,
       stream: false
     })
-  })
+  }, options.timeoutMs)
 
   if (!response.ok) {
     return ''
@@ -129,9 +142,9 @@ async function callLocalModel(
   return ''
 }
 
-async function fetchWithTimeout(input: string, init: RequestInit): Promise<Response> {
+async function fetchWithTimeout(input: string, init: RequestInit, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     return await fetch(input, { ...init, signal: controller.signal })

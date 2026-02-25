@@ -2,8 +2,6 @@ import assert from 'node:assert/strict'
 import path from 'node:path'
 import { readdir } from 'node:fs/promises'
 import { MemoryEngine } from '../src/MemoryEngine'
-import { query } from '../src/query'
-import { generateAnswer } from '../src/generateAnswer'
 import { Node } from '../src/Collection'
 
 type Scenario = {
@@ -33,9 +31,7 @@ const SCENARIOS: Scenario[] = [
 async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run')
   const testDir = path.resolve(process.cwd(), 'test')
-
-  process.env.LLM_PROVIDER = 'local'
-  process.env.LOCAL_LLM_URL = process.env.LOCAL_LLM_URL || 'http://localhost:11434/api/generate'
+  const localUrl = process.env.LOCAL_LLM_URL || 'http://localhost:11434/api/generate'
 
   const markdownFiles = (await readdir(testDir)).filter((name) => name.toLowerCase().endsWith('.md'))
   assert.ok(markdownFiles.length >= 5, 'test/ klasorunde en az 5 markdown dosyasi olmali')
@@ -44,7 +40,9 @@ async function main(): Promise<void> {
     model: 'qwen2.5:7b',
     topK: 5,
     maxContextChars: 2000,
-    temperature: 0
+    temperature: 0,
+    provider: 'local',
+    localUrl
   })
 
   const collectionId = 'ollamaDetailedTestCollection'
@@ -62,8 +60,8 @@ async function main(): Promise<void> {
 
   console.log('=== Detailed Memory Tool Test (Ollama: qwen2.5:7b) ===')
   console.log(`Docs: ${stats.documents} | Sections: ${stats.sections} | Chunks: ${stats.chunks} | Keywords: ${collection.getKeywordIndex().size}`)
-  console.log(`LLM Provider: ${process.env.LLM_PROVIDER}`)
-  console.log(`LLM URL: ${process.env.LOCAL_LLM_URL}`)
+  console.log('LLM Provider: local')
+  console.log(`LLM URL: ${localUrl}`)
   console.log(`Model: qwen2.5:7b`)
   console.log(`Mode: ${dryRun ? 'DRY-RUN (LLM call skipped)' : 'LIVE (real Ollama call)'}`)
 
@@ -71,7 +69,7 @@ async function main(): Promise<void> {
     console.log('\n--- Scenario:', scenario.name, '---')
     console.log('Question:', scenario.question)
 
-    const retrieved = await query(collection, scenario.question, 5)
+    const retrieved = await engine.retrieve(collectionId, scenario.question, 5)
     assert.ok(retrieved.length > 0, `Retrieval sonuc donmedi: ${scenario.name}`)
 
     console.log('Retrieved chunks:')
@@ -79,7 +77,7 @@ async function main(): Promise<void> {
       console.log(`- ${chunk.id} (parent=${chunk.parent})`)
     }
 
-    const prompt = await generateAnswer(collection, scenario.question, 5, 2000)
+    const prompt = await engine.buildPrompt(collectionId, scenario.question, 5, 2000)
     assert.ok(prompt.includes('CONTEXT:'), 'Prompt context bolumu eksik')
     assert.ok(prompt.includes('QUESTION:'), 'Prompt question bolumu eksik')
     console.log(`Prompt chars: ${prompt.length}`)
