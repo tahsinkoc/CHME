@@ -1,10 +1,15 @@
-import { readdir, stat } from 'node:fs/promises'
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { gzip as gzipCallback, gunzip as gunzipCallback } from 'node:zlib'
+import { promisify } from 'node:util'
 import { Collection, Node } from './Collection'
 import { ingest as ingestCollection, ingestFiles } from './ingest'
 import { query } from './query'
 import { generateAnswer } from './generateAnswer'
 import { callLLM, LLMProvider } from './callLLM'
+
+const gzip = promisify(gzipCallback)
+const gunzip = promisify(gunzipCallback)
 
 type MemoryEngineOptions = {
   model?: string
@@ -64,6 +69,57 @@ export type CollectionStats = {
   keywords: number
 }
 
+export type SnapshotFileMeta = {
+  path: string
+  collectionId: string
+  size: number
+  mtimeMs: number
+}
+
+export type SnapshotSaveReport = {
+  collections: number
+  files: number
+  snapshotDir: string
+}
+
+export type SnapshotLoadOptions = {
+  sourceRootPath?: string
+}
+
+export type SnapshotLoadReport = {
+  collectionsLoaded: number
+  staleCollectionsReingested: string[]
+  filesChecked: number
+}
+
+type RoutingRuleSnapshot = {
+  pattern: string
+  flags: string
+  collectionId: string
+  priority?: number
+}
+
+type CollectionSnapshot = {
+  id: string
+  documents: Array<{ id: string; path: string }>
+  nodes: Node[]
+  keywordIndex: Array<{ token: string; nodeIds: string[] }>
+}
+
+type EngineSnapshotManifest = {
+  schemaVersion: number
+  savedAt: string
+  lastSourceRootPath?: string
+  defaultCollectionId: string
+  minRouteScore: number
+  routingRules: RoutingRuleSnapshot[]
+  collections: string[]
+  sourceFiles: SnapshotFileMeta[]
+}
+
+const SNAPSHOT_SCHEMA_VERSION = 1
+const SNAPSHOT_EXTENSION = '.chme.json.gz'
+const ENGINE_SNAPSHOT_FILE = `_engine${SNAPSHOT_EXTENSION}`
 const DEFAULT_TOP_COLLECTIONS = 3
 const DEFAULT_TOP_K_PER_COLLECTION = 3
 const DEFAULT_MIN_ROUTE_SCORE = 1
@@ -87,6 +143,11 @@ export class MemoryEngine {
   private openAIApiKey?: string
   private routingRules: RoutingRule[]
   private routingReport: RoutingReport
+  private minRouteScore: number
+  private lastSourceRootPath?: string
+  private lastDefaultCollectionId: string
+  private lastSourceFiles: SnapshotFileMeta[]
+  private collectionToFiles: Map<string, string[]>
 
   constructor(options: MemoryEngineOptions = {}) {
     this.collections = new Map()
@@ -101,6 +162,11 @@ export class MemoryEngine {
     this.openAIApiKey = options.openAIApiKey
     this.routingRules = []
     this.routingReport = { lastIngestAssignments: [] }
+    this.minRouteScore = DEFAULT_MIN_ROUTE_SCORE
+    this.lastSourceRootPath = undefined
+    this.lastDefaultCollectionId = 'general'
+    this.lastSourceFiles = []
+    this.collectionToFiles = new Map()
 
     if (options.model !== undefined) {
       this.setModel(options.model)
@@ -205,6 +271,13 @@ export class MemoryEngine {
     const maxCollections = options.maxCollections && options.maxCollections > 0
       ? options.maxCollections
       : Number.POSITIVE_INFINITY
+    const minRouteScore = this.normalizeMinRouteScore(options.minRouteScore, this.minRouteScore)
+
+    this.lastSourceRootPath = absoluteRoot
+    this.lastDefaultCollectionId = defaultCollectionId
+    this.minRouteScore = minRouteScore
+    this.lastSourceFiles = []
+    this.collectionToFiles = new Map()
 
     const grouped = new Map<string, string[]>()
     const assignments: RoutingAssignment[] = []
@@ -232,8 +305,24 @@ export class MemoryEngine {
         grouped.set(resolvedCollectionId, [filePath])
       }
 
+      const relativeFile = this.normalizePath(path.relative(absoluteRoot, filePath))
+      const sourceStats = await stat(filePath)
+      this.lastSourceFiles.push({
+        path: relativeFile,
+        collectionId: resolvedCollectionId,
+        size: sourceStats.size,
+        mtimeMs: sourceStats.mtimeMs
+      })
+
+      const collectionFiles = this.collectionToFiles.get(resolvedCollectionId)
+      if (collectionFiles) {
+        collectionFiles.push(relativeFile)
+      } else {
+        this.collectionToFiles.set(resolvedCollectionId, [relativeFile])
+      }
+
       assignments.push({
-        file: this.normalizePath(path.relative(absoluteRoot, filePath)),
+        file: relativeFile,
         collectionId: resolvedCollectionId,
         reason
       })
@@ -249,6 +338,7 @@ export class MemoryEngine {
       await ingestFiles(fileList, absoluteRoot, collection)
     }
 
+    this.sortSourceMetadata()
     this.routingReport = {
       lastIngestAssignments: assignments.map((item) => ({ ...item }))
     }
@@ -286,7 +376,7 @@ export class MemoryEngine {
         return a.collectionId.localeCompare(b.collectionId)
       })
 
-    const filtered = scored.filter((item) => item.score >= DEFAULT_MIN_ROUTE_SCORE)
+    const filtered = scored.filter((item) => item.score >= this.minRouteScore)
     const source = filtered.length > 0 ? filtered : scored
 
     return source.slice(0, topCollections).map((item) => item.collectionId)
@@ -320,6 +410,177 @@ export class MemoryEngine {
       throw new Error(`Collection not found: ${collectionId}`)
     }
     return await generateAnswer(collection, question, topK, maxContextChars)
+  }
+
+  async saveSnapshots(snapshotDir: string): Promise<SnapshotSaveReport> {
+    const absoluteSnapshotDir = path.resolve(snapshotDir)
+    await mkdir(absoluteSnapshotDir, { recursive: true })
+
+    const collectionIds = Array.from(this.collections.keys()).sort((a, b) => a.localeCompare(b))
+
+    for (const collectionId of collectionIds) {
+      const collection = this.collections.get(collectionId)
+      if (!collection) {
+        continue
+      }
+      const snapshotPath = this.collectionSnapshotPath(absoluteSnapshotDir, collectionId)
+      const snapshot = this.serializeCollection(collection)
+      await this.writeGzipJson(snapshotPath, snapshot)
+    }
+
+    const manifest: EngineSnapshotManifest = {
+      schemaVersion: SNAPSHOT_SCHEMA_VERSION,
+      savedAt: new Date().toISOString(),
+      lastSourceRootPath: this.lastSourceRootPath,
+      defaultCollectionId: this.lastDefaultCollectionId,
+      minRouteScore: this.minRouteScore,
+      routingRules: this.routingRules.map((rule) => ({
+        pattern: rule.pattern.source,
+        flags: rule.pattern.flags,
+        collectionId: rule.collectionId,
+        priority: rule.priority
+      })),
+      collections: collectionIds,
+      sourceFiles: this.lastSourceFiles.map((item) => ({ ...item }))
+    }
+
+    const engineSnapshotPath = path.join(absoluteSnapshotDir, ENGINE_SNAPSHOT_FILE)
+    await this.writeGzipJson(engineSnapshotPath, manifest)
+
+    return {
+      collections: collectionIds.length,
+      files: collectionIds.length + 1,
+      snapshotDir: absoluteSnapshotDir
+    }
+  }
+
+  async loadSnapshots(snapshotDir: string, options: SnapshotLoadOptions = {}): Promise<SnapshotLoadReport> {
+    const absoluteSnapshotDir = path.resolve(snapshotDir)
+    const manifestPath = path.join(absoluteSnapshotDir, ENGINE_SNAPSHOT_FILE)
+    const manifest = await this.readGzipJson<EngineSnapshotManifest>(manifestPath)
+
+    if (manifest.schemaVersion !== SNAPSHOT_SCHEMA_VERSION) {
+      throw new Error(`Unsupported snapshot schema version: ${manifest.schemaVersion}`)
+    }
+
+    this.collections = new Map()
+    this.routingRules = (manifest.routingRules || []).map((rule) => ({
+      pattern: new RegExp(rule.pattern, rule.flags),
+      collectionId: rule.collectionId,
+      priority: rule.priority
+    }))
+    this.lastSourceRootPath = manifest.lastSourceRootPath
+      ? path.resolve(manifest.lastSourceRootPath)
+      : undefined
+    this.lastDefaultCollectionId = this.slugify(manifest.defaultCollectionId || 'general')
+    this.minRouteScore = this.normalizeMinRouteScore(manifest.minRouteScore, DEFAULT_MIN_ROUTE_SCORE)
+    this.lastSourceFiles = (manifest.sourceFiles || []).map((item) => ({ ...item }))
+    this.collectionToFiles = this.buildCollectionToFiles(this.lastSourceFiles)
+    this.sortSourceMetadata()
+
+    let collectionsLoaded = 0
+    for (const collectionId of manifest.collections || []) {
+      const snapshotPath = this.collectionSnapshotPath(absoluteSnapshotDir, collectionId)
+      const snapshot = await this.readGzipJson<CollectionSnapshot>(snapshotPath)
+      this.restoreCollection(snapshot)
+      collectionsLoaded += 1
+    }
+
+    let filesChecked = 0
+    const staleCollections = new Set<string>()
+
+    const sourceRootPath = options.sourceRootPath
+      ? path.resolve(options.sourceRootPath)
+      : this.lastSourceRootPath
+
+    if (sourceRootPath) {
+      const manifestPaths = new Set(this.lastSourceFiles.map((item) => item.path))
+
+      for (const fileMeta of this.lastSourceFiles) {
+        filesChecked += 1
+        const absoluteFilePath = path.resolve(sourceRootPath, fileMeta.path)
+
+        try {
+          const currentStats = await stat(absoluteFilePath)
+          if (!currentStats.isFile() || currentStats.size !== fileMeta.size || currentStats.mtimeMs !== fileMeta.mtimeMs) {
+            staleCollections.add(fileMeta.collectionId)
+          }
+        } catch {
+          staleCollections.add(fileMeta.collectionId)
+        }
+      }
+
+      const currentFiles = await this.collectMarkdownFiles(sourceRootPath)
+      currentFiles.sort((a, b) => a.localeCompare(b))
+
+      const currentGrouped = new Map<string, string[]>()
+      for (const absoluteFile of currentFiles) {
+        const relativeFile = this.normalizePath(path.relative(sourceRootPath, absoluteFile))
+        const route = this.routeFileToCollection(sourceRootPath, absoluteFile, this.lastDefaultCollectionId)
+
+        const list = currentGrouped.get(route.collectionId)
+        if (list) {
+          list.push(absoluteFile)
+        } else {
+          currentGrouped.set(route.collectionId, [absoluteFile])
+        }
+
+        if (!manifestPaths.has(relativeFile)) {
+          staleCollections.add(route.collectionId)
+        }
+      }
+
+      const staleCollectionIds = Array.from(staleCollections).sort((a, b) => a.localeCompare(b))
+      for (const collectionId of staleCollectionIds) {
+        const replacement = new Collection(collectionId)
+        this.collections.set(collectionId, replacement)
+
+        const filesForCollection = currentGrouped.get(collectionId) || []
+        if (filesForCollection.length > 0) {
+          await ingestFiles(filesForCollection, sourceRootPath, replacement)
+        }
+      }
+
+      this.lastSourceRootPath = sourceRootPath
+      this.lastSourceFiles = []
+      this.collectionToFiles = new Map()
+
+      for (const absoluteFile of currentFiles) {
+        const relativeFile = this.normalizePath(path.relative(sourceRootPath, absoluteFile))
+        const route = this.routeFileToCollection(sourceRootPath, absoluteFile, this.lastDefaultCollectionId)
+        const currentStats = await stat(absoluteFile)
+
+        this.lastSourceFiles.push({
+          path: relativeFile,
+          collectionId: route.collectionId,
+          size: currentStats.size,
+          mtimeMs: currentStats.mtimeMs
+        })
+
+        const files = this.collectionToFiles.get(route.collectionId)
+        if (files) {
+          files.push(relativeFile)
+        } else {
+          this.collectionToFiles.set(route.collectionId, [relativeFile])
+        }
+      }
+
+      this.sortSourceMetadata()
+    }
+
+    this.routingReport = {
+      lastIngestAssignments: this.lastSourceFiles.map((item) => ({
+        file: item.path,
+        collectionId: item.collectionId,
+        reason: 'snapshot'
+      }))
+    }
+
+    return {
+      collectionsLoaded,
+      staleCollectionsReingested: Array.from(staleCollections).sort((a, b) => a.localeCompare(b)),
+      filesChecked
+    }
   }
 
   setModel(model: string): void {
@@ -565,6 +826,16 @@ export class MemoryEngine {
     return value
   }
 
+  private normalizeMinRouteScore(value: number | undefined, fallback: number): number {
+    if (value === undefined) {
+      return fallback
+    }
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error('minRouteScore must be a number >= 0')
+    }
+    return value
+  }
+
   private slugify(input: string): string {
     const normalized = input
       .toLowerCase()
@@ -652,5 +923,121 @@ export class MemoryEngine {
         results.push(fullPath)
       }
     }
+  }
+
+  private serializeCollection(collection: Collection): CollectionSnapshot {
+    const documents = Array.from(collection.getAllDocuments().values())
+      .map((doc) => ({ id: doc.id, path: doc.path }))
+      .sort((a, b) => a.id.localeCompare(b.id))
+
+    const nodes = Array.from(collection.getAllNodes().values())
+      .map((node) => ({
+        ...node,
+        children: [...node.children],
+        tokens: [...node.tokens],
+        embedding: node.embedding ? [...node.embedding] : undefined
+      }))
+      .sort((a, b) => {
+        if (a.depth !== b.depth) {
+          return a.depth - b.depth
+        }
+        return a.id.localeCompare(b.id)
+      })
+
+    const keywordIndex = Array.from(collection.getKeywordIndex().entries())
+      .map(([token, nodeIds]) => ({ token, nodeIds: Array.from(nodeIds).sort((a, b) => a.localeCompare(b)) }))
+      .sort((a, b) => a.token.localeCompare(b.token))
+
+    return {
+      id: collection.getId(),
+      documents,
+      nodes,
+      keywordIndex
+    }
+  }
+
+  private restoreCollection(snapshot: CollectionSnapshot): void {
+    const collection = this.createCollection(snapshot.id)
+
+    for (const doc of snapshot.documents || []) {
+      collection.addDocument(doc.id, doc.path)
+    }
+
+    const sortedNodes = [...(snapshot.nodes || [])].sort((a, b) => {
+      if (a.depth !== b.depth) {
+        return a.depth - b.depth
+      }
+      return a.id.localeCompare(b.id)
+    })
+
+    for (const node of sortedNodes) {
+      collection.addNode({
+        id: node.id,
+        text: node.text,
+        parent: node.parent,
+        children: [],
+        depth: node.depth,
+        docId: node.docId,
+        tokens: [...(node.tokens || [])],
+        embedding: node.embedding ? [...node.embedding] : undefined
+      })
+    }
+
+    for (const entry of snapshot.keywordIndex || []) {
+      for (const nodeId of entry.nodeIds || []) {
+        collection.addToKeywordIndex(entry.token, nodeId)
+      }
+    }
+  }
+
+  private buildCollectionToFiles(sourceFiles: SnapshotFileMeta[]): Map<string, string[]> {
+    const grouped = new Map<string, string[]>()
+
+    for (const item of sourceFiles) {
+      const list = grouped.get(item.collectionId)
+      if (list) {
+        list.push(item.path)
+      } else {
+        grouped.set(item.collectionId, [item.path])
+      }
+    }
+
+    for (const [collectionId, files] of grouped.entries()) {
+      files.sort((a, b) => a.localeCompare(b))
+      grouped.set(collectionId, files)
+    }
+
+    return grouped
+  }
+
+  private sortSourceMetadata(): void {
+    this.lastSourceFiles.sort((a, b) => {
+      if (a.collectionId !== b.collectionId) {
+        return a.collectionId.localeCompare(b.collectionId)
+      }
+      return a.path.localeCompare(b.path)
+    })
+
+    for (const [collectionId, files] of this.collectionToFiles.entries()) {
+      const unique = Array.from(new Set(files)).sort((a, b) => a.localeCompare(b))
+      this.collectionToFiles.set(collectionId, unique)
+    }
+  }
+
+  private collectionSnapshotPath(snapshotDir: string, collectionId: string): string {
+    const encodedId = encodeURIComponent(collectionId)
+    return path.join(snapshotDir, `${encodedId}${SNAPSHOT_EXTENSION}`)
+  }
+
+  private async writeGzipJson(filePath: string, value: unknown): Promise<void> {
+    const json = JSON.stringify(value)
+    const compressed = await gzip(Buffer.from(json, 'utf8'))
+    await writeFile(filePath, compressed)
+  }
+
+  private async readGzipJson<T>(filePath: string): Promise<T> {
+    const compressed = await readFile(filePath)
+    const jsonBuffer = await gunzip(compressed)
+    return JSON.parse(jsonBuffer.toString('utf8')) as T
   }
 }

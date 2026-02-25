@@ -34,6 +34,10 @@ export class Collection {
     return this.documents.get(docId)
   }
 
+  getAllDocuments(): Map<string, { id: string; path: string }> {
+    return this.documents
+  }
+
   addNode(node: Node): void {
     if (node.parent) {
       const parent = this.nodes.get(node.parent)
