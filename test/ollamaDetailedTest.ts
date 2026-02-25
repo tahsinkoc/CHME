@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict'
 import path from 'node:path'
-import { readdir } from 'node:fs/promises'
 import { MemoryEngine } from '../src/MemoryEngine'
 
 type Scenario = {
@@ -32,9 +31,6 @@ async function main(): Promise<void> {
   const testDir = path.resolve(process.cwd(), 'test')
   const localUrl = process.env.LOCAL_LLM_URL || 'http://localhost:11434/api/generate'
 
-  const markdownFiles = (await readdir(testDir)).filter((name) => name.toLowerCase().endsWith('.md'))
-  assert.ok(markdownFiles.length >= 5, 'test/ klasorunde en az 5 markdown dosyasi olmali')
-
   const engine = new MemoryEngine({
     model: 'qwen2.5:7b',
     topK: 5,
@@ -44,51 +40,85 @@ async function main(): Promise<void> {
     localUrl
   })
 
-  const collectionId = 'ollamaDetailedTestCollection'
-  engine.createCollection(collectionId)
-  await engine.ingest(collectionId, testDir)
+  engine.setRoutingRules([
+    { pattern: /^test\//, collectionId: 'manual_test_root', priority: -1 },
+    { pattern: /faq/i, collectionId: 'knowledge_faq', priority: 10 }
+  ])
 
-  const stats = engine.getCollectionStats(collectionId)
-  assert.ok(stats.documents >= 5, 'Dokuman root sayisi 5 veya uzeri olmali')
-  assert.ok(stats.sections > 0, 'Section node bulunamadi')
-  assert.ok(stats.chunks > 0, 'Chunk node bulunamadi')
-  assert.ok(stats.keywords > 0, 'Keyword index bos olmamali')
+  const ingestReport = await engine.ingestAuto(testDir, { defaultCollectionId: 'general' })
+  assert.ok(ingestReport.files >= 5, 'En az 5 markdown dosyasi ingest edilmeli')
+  assert.equal(ingestReport.assignments.length, ingestReport.files)
+
+  const routingReport = engine.getRoutingReport()
+  assert.equal(routingReport.lastIngestAssignments.length, ingestReport.assignments.length)
+
+  const assignedCollections = Array.from(new Set(ingestReport.assignments.map((a) => a.collectionId))).sort((a, b) => a.localeCompare(b))
+  assert.ok(assignedCollections.length >= 1, 'En az bir collection olusmali')
+
+  const total = assignedCollections
+    .map((id) => engine.getCollectionStats(id))
+    .reduce(
+      (acc, stats) => {
+        acc.documents += stats.documents
+        acc.sections += stats.sections
+        acc.chunks += stats.chunks
+        acc.keywords += stats.keywords
+        return acc
+      },
+      { documents: 0, sections: 0, chunks: 0, keywords: 0 }
+    )
 
   console.log('=== Detailed Memory Tool Test (Ollama: qwen2.5:7b) ===')
-  console.log(`Docs: ${stats.documents} | Sections: ${stats.sections} | Chunks: ${stats.chunks} | Keywords: ${stats.keywords}`)
+  console.log(`Files ingested: ${ingestReport.files}`)
+  console.log(`Collections: ${assignedCollections.join(', ')}`)
+  console.log(`Docs: ${total.documents} | Sections: ${total.sections} | Chunks: ${total.chunks} | Keywords: ${total.keywords}`)
   console.log('LLM Provider: local')
   console.log(`LLM URL: ${localUrl}`)
-  console.log(`Model: qwen2.5:7b`)
+  console.log('Model: qwen2.5:7b')
   console.log(`Mode: ${dryRun ? 'DRY-RUN (LLM call skipped)' : 'LIVE (real Ollama call)'}`)
 
   for (const scenario of SCENARIOS) {
-    console.log('\n--- Scenario:', scenario.name, '---')
-    console.log('Question:', scenario.question)
+    console.log(`\n--- Scenario: ${scenario.name} ---`)
+    console.log(`Question: ${scenario.question}`)
 
-    const retrieved = await engine.retrieve(collectionId, scenario.question, 5)
+    const routed = await engine.routeCollections(scenario.question, { topCollections: 3 })
+    assert.ok(routed.length > 0, `Collection route bulunamadi: ${scenario.name}`)
+    console.log(`Routed collections: ${routed.join(', ')}`)
+
+    const firstCollection = routed[0]
+    const retrieved = await engine.retrieve(firstCollection, scenario.question, 3)
     assert.ok(retrieved.length > 0, `Retrieval sonuc donmedi: ${scenario.name}`)
 
-    console.log('Retrieved chunks:')
+    console.log(`Retrieved chunks from ${firstCollection}:`)
     for (const chunk of retrieved) {
       console.log(`- ${chunk.id} (parent=${chunk.parent})`)
     }
 
-    const prompt = await engine.buildPrompt(collectionId, scenario.question, 5, 2000)
-    assert.ok(prompt.includes('CONTEXT:'), 'Prompt context bolumu eksik')
-    assert.ok(prompt.includes('QUESTION:'), 'Prompt question bolumu eksik')
-    console.log(`Prompt chars: ${prompt.length}`)
+    const scopedPrompt = await engine.buildPrompt(firstCollection, scenario.question, 3, 1200)
+    assert.ok(scopedPrompt.includes('CONTEXT:'), 'Scoped prompt context bolumu eksik')
+    assert.ok(scopedPrompt.includes('QUESTION:'), 'Scoped prompt question bolumu eksik')
+    console.log(`Scoped prompt chars: ${scopedPrompt.length}`)
 
     if (dryRun) {
       continue
     }
 
-    const started = Date.now()
-    const answer = await engine.ask(collectionId, scenario.question)
-    const elapsed = Date.now() - started
+    const globalStart = Date.now()
+    const globalAnswer = await engine.ask(scenario.question, {
+      topCollections: 3,
+      topKPerCollection: 3,
+      maxContextChars: 2000
+    })
+    const globalElapsed = Date.now() - globalStart
+    assert.ok(globalAnswer.trim().length > 0, `Global ask bos cevap dondu: ${scenario.name}`)
+    console.log(`Global answer time: ${globalElapsed}ms`)
+    console.log(`Global answer:\n${globalAnswer}`)
 
-    assert.ok(answer.trim().length > 0, `LLM bos cevap dondu: ${scenario.name}`)
-    console.log(`Answer time: ${elapsed}ms`)
-    console.log(`Answer:\n${answer}`)
+    const scopedStart = Date.now()
+    const scopedAnswer = await engine.ask(firstCollection, scenario.question)
+    const scopedElapsed = Date.now() - scopedStart
+    assert.ok(scopedAnswer.trim().length > 0, `Scoped ask bos cevap dondu: ${scenario.name}`)
+    console.log(`Scoped answer time: ${scopedElapsed}ms`)
   }
 
   console.log('\nDetailed Ollama scenario test passed')

@@ -1,5 +1,7 @@
-import { Collection } from './Collection'
-import { ingest as ingestCollection } from './ingest'
+import { readdir, stat } from 'node:fs/promises'
+import path from 'node:path'
+import { Collection, Node } from './Collection'
+import { ingest as ingestCollection, ingestFiles } from './ingest'
 import { query } from './query'
 import { generateAnswer } from './generateAnswer'
 import { callLLM, LLMProvider } from './callLLM'
@@ -16,6 +18,44 @@ type MemoryEngineOptions = {
   openAIApiKey?: string
 }
 
+export type RoutingRule = {
+  pattern: RegExp
+  collectionId: string
+  priority?: number
+}
+
+export type IngestAutoOptions = {
+  maxCollections?: number
+  minRouteScore?: number
+  defaultCollectionId?: string
+}
+
+export type RouteOptions = {
+  topCollections?: number
+}
+
+export type AskGlobalOptions = {
+  topCollections?: number
+  topKPerCollection?: number
+  maxContextChars?: number
+}
+
+type RoutingAssignment = {
+  file: string
+  collectionId: string
+  reason: string
+}
+
+export type IngestAutoReport = {
+  files: number
+  collectionsCreated: string[]
+  assignments: RoutingAssignment[]
+}
+
+export type RoutingReport = {
+  lastIngestAssignments: RoutingAssignment[]
+}
+
 export type CollectionStats = {
   documents: number
   sections: number
@@ -23,6 +63,16 @@ export type CollectionStats = {
   nodes: number
   keywords: number
 }
+
+const DEFAULT_TOP_COLLECTIONS = 3
+const DEFAULT_TOP_K_PER_COLLECTION = 3
+const DEFAULT_MIN_ROUTE_SCORE = 1
+
+const STOPWORDS = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with',
+  'this', 'these', 'those', 'or', 'if', 'then', 'than', 'but', 'not', 'no', 'yes', 'you', 'your', 'we', 'our', 'they', 'their', 'i', 'me', 'my', 'mine', 'them',
+  'his', 'her', 'hers', 'who', 'whom', 'what', 'which', 'when', 'where', 'why', 'how', 'into', 'out', 'up', 'down', 'over', 'under', 'again', 'further', 'once'
+])
 
 export class MemoryEngine {
   private collections: Map<string, Collection>
@@ -35,6 +85,8 @@ export class MemoryEngine {
   private localUrl?: string
   private openAIBaseUrl?: string
   private openAIApiKey?: string
+  private routingRules: RoutingRule[]
+  private routingReport: RoutingReport
 
   constructor(options: MemoryEngineOptions = {}) {
     this.collections = new Map()
@@ -47,6 +99,8 @@ export class MemoryEngine {
     this.localUrl = options.localUrl
     this.openAIBaseUrl = options.openAIBaseUrl
     this.openAIApiKey = options.openAIApiKey
+    this.routingRules = []
+    this.routingReport = { lastIngestAssignments: [] }
 
     if (options.model !== undefined) {
       this.setModel(options.model)
@@ -66,6 +120,10 @@ export class MemoryEngine {
   }
 
   createCollection(id: string): Collection {
+    if (!id || id.trim().length === 0) {
+      throw new Error('Collection id must be a non-empty string')
+    }
+
     const existing = this.collections.get(id)
     if (existing) {
       return existing
@@ -110,27 +168,140 @@ export class MemoryEngine {
     }
   }
 
-  async ingest(collectionId: string, path: string): Promise<void> {
+  getRoutingReport(): RoutingReport {
+    return {
+      lastIngestAssignments: this.routingReport.lastIngestAssignments.map((item) => ({ ...item }))
+    }
+  }
+
+  setRoutingRules(rules: RoutingRule[]): void {
+    this.routingRules = rules.map((rule) => {
+      if (!rule.collectionId || rule.collectionId.trim().length === 0) {
+        throw new Error('Routing rule collectionId must be a non-empty string')
+      }
+      return {
+        pattern: rule.pattern,
+        collectionId: this.slugify(rule.collectionId),
+        priority: rule.priority
+      }
+    })
+  }
+
+  async ingest(collectionId: string, targetPath: string): Promise<void> {
     const collection = this.collections.get(collectionId)
     if (!collection) {
       throw new Error(`Collection not found: ${collectionId}`)
     }
 
-    await ingestCollection(path, collection)
+    await ingestCollection(targetPath, collection)
   }
 
-  async ask(collectionId: string, question: string): Promise<string> {
-    const prompt = await this.buildPrompt(collectionId, question)
-    const maxTokens = this.maxTokens ?? Math.max(64, Math.min(1024, Math.floor(this.maxContextChars / 4)))
-    return await callLLM(prompt, this.model, this.temperature, maxTokens, {
-      provider: this.provider,
-      localUrl: this.localUrl,
-      openAIBaseUrl: this.openAIBaseUrl,
-      openAIApiKey: this.openAIApiKey
-    })
+  async ingestAuto(rootPath: string, options: IngestAutoOptions = {}): Promise<IngestAutoReport> {
+    const absoluteRoot = path.resolve(rootPath)
+    const files = await this.collectMarkdownFiles(absoluteRoot)
+    files.sort((a, b) => a.localeCompare(b))
+
+    const defaultCollectionId = this.slugify(options.defaultCollectionId ?? 'general')
+    const maxCollections = options.maxCollections && options.maxCollections > 0
+      ? options.maxCollections
+      : Number.POSITIVE_INFINITY
+
+    const grouped = new Map<string, string[]>()
+    const assignments: RoutingAssignment[] = []
+    const created = new Set<string>()
+
+    for (const filePath of files) {
+      const route = this.routeFileToCollection(absoluteRoot, filePath, defaultCollectionId)
+      let resolvedCollectionId = route.collectionId
+      let reason = route.reason
+
+      if (!this.collections.has(resolvedCollectionId) && created.size >= maxCollections) {
+        resolvedCollectionId = defaultCollectionId
+        reason = `maxCollections:${reason}`
+      }
+
+      if (!this.collections.has(resolvedCollectionId)) {
+        this.createCollection(resolvedCollectionId)
+        created.add(resolvedCollectionId)
+      }
+
+      const list = grouped.get(resolvedCollectionId)
+      if (list) {
+        list.push(filePath)
+      } else {
+        grouped.set(resolvedCollectionId, [filePath])
+      }
+
+      assignments.push({
+        file: this.normalizePath(path.relative(absoluteRoot, filePath)),
+        collectionId: resolvedCollectionId,
+        reason
+      })
+    }
+
+    const collectionIds = Array.from(grouped.keys()).sort((a, b) => a.localeCompare(b))
+    for (const collectionId of collectionIds) {
+      const collection = this.collections.get(collectionId)
+      if (!collection) {
+        continue
+      }
+      const fileList = grouped.get(collectionId) || []
+      await ingestFiles(fileList, absoluteRoot, collection)
+    }
+
+    this.routingReport = {
+      lastIngestAssignments: assignments.map((item) => ({ ...item }))
+    }
+
+    return {
+      files: files.length,
+      collectionsCreated: Array.from(created).sort((a, b) => a.localeCompare(b)),
+      assignments
+    }
   }
 
-  async retrieve(collectionId: string, question: string, topK: number = this.topK) {
+  async routeCollections(question: string, options: RouteOptions = {}): Promise<string[]> {
+    const topCollections = this.normalizePositiveInteger(options.topCollections, DEFAULT_TOP_COLLECTIONS)
+    if (topCollections < 1 || this.collections.size === 0) {
+      return []
+    }
+
+    const queryTokens = this.tokenize(question)
+
+    const scored = Array.from(this.collections.entries())
+      .map(([collectionId, collection]) => {
+        let score = 0
+        const keywordIndex = collection.getKeywordIndex()
+        for (const token of queryTokens) {
+          if (keywordIndex.has(token)) {
+            score += 1
+          }
+        }
+        return { collectionId, score }
+      })
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score
+        }
+        return a.collectionId.localeCompare(b.collectionId)
+      })
+
+    const filtered = scored.filter((item) => item.score >= DEFAULT_MIN_ROUTE_SCORE)
+    const source = filtered.length > 0 ? filtered : scored
+
+    return source.slice(0, topCollections).map((item) => item.collectionId)
+  }
+
+  async ask(collectionId: string, question: string): Promise<string>
+  async ask(question: string, options?: AskGlobalOptions): Promise<string>
+  async ask(arg1: string, arg2?: string | AskGlobalOptions): Promise<string> {
+    if (typeof arg2 === 'string') {
+      return await this.askScoped(arg1, arg2)
+    }
+    return await this.askGlobal(arg1, arg2)
+  }
+
+  async retrieve(collectionId: string, question: string, topK: number = this.topK): Promise<Node[]> {
     const collection = this.collections.get(collectionId)
     if (!collection) {
       throw new Error(`Collection not found: ${collectionId}`)
@@ -209,5 +380,277 @@ export class MemoryEngine {
       throw new Error('openAIApiKey must be a non-empty string')
     }
     this.openAIApiKey = apiKey
+  }
+
+  private async askScoped(collectionId: string, question: string): Promise<string> {
+    const prompt = await this.buildPrompt(collectionId, question)
+    const maxTokens = this.resolveMaxTokens()
+    return await callLLM(prompt, this.model, this.temperature, maxTokens, {
+      provider: this.provider,
+      localUrl: this.localUrl,
+      openAIBaseUrl: this.openAIBaseUrl,
+      openAIApiKey: this.openAIApiKey
+    })
+  }
+
+  private async askGlobal(question: string, options: AskGlobalOptions = {}): Promise<string> {
+    const topCollections = this.normalizePositiveInteger(options.topCollections, DEFAULT_TOP_COLLECTIONS)
+    const topKPerCollection = this.normalizePositiveInteger(options.topKPerCollection, DEFAULT_TOP_K_PER_COLLECTION)
+    const maxContextChars = options.maxContextChars ?? this.maxContextChars
+
+    const selectedCollections = await this.routeCollections(question, { topCollections })
+    if (selectedCollections.length === 0) {
+      throw new Error('No collections available for global ask')
+    }
+
+    const context = await this.buildGlobalContext(selectedCollections, question, topKPerCollection, maxContextChars)
+    const prompt = this.composePrompt(context, question)
+
+    return await callLLM(prompt, this.model, this.temperature, this.resolveMaxTokens(), {
+      provider: this.provider,
+      localUrl: this.localUrl,
+      openAIBaseUrl: this.openAIBaseUrl,
+      openAIApiKey: this.openAIApiKey
+    })
+  }
+
+  private async buildGlobalContext(
+    collectionIds: string[],
+    question: string,
+    topKPerCollection: number,
+    maxContextChars: number
+  ): Promise<string> {
+    const blocks: string[] = []
+
+    for (const collectionId of collectionIds) {
+      const collection = this.collections.get(collectionId)
+      if (!collection) {
+        continue
+      }
+
+      const chunks = await this.retrieve(collectionId, question, topKPerCollection)
+      for (const chunk of chunks) {
+        const sectionTitle = this.resolveSectionTitle(collection, chunk)
+        const heading = sectionTitle ? `## ${sectionTitle}` : '## Section'
+        blocks.push(`### Collection: ${collectionId}\n${heading}\n${chunk.text}`)
+      }
+    }
+
+    return this.fitBlocksToLimit(blocks, maxContextChars)
+  }
+
+  private composePrompt(context: string, question: string): string {
+    return [
+      'You are an assistant with access to company knowledge.',
+      'Use the following context to answer the question:',
+      '',
+      'CONTEXT:',
+      context,
+      '',
+      'QUESTION:',
+      question,
+      '',
+      'Answer:'
+    ].join('\n')
+  }
+
+  private resolveSectionTitle(collection: Collection, chunk: Node): string {
+    if (!chunk.parent) {
+      return ''
+    }
+
+    const sectionNode = collection.getNode(chunk.parent)
+    if (!sectionNode) {
+      return ''
+    }
+
+    return sectionNode.text.trim()
+  }
+
+  private fitBlocksToLimit(blocks: string[], maxChars: number): string {
+    if (maxChars <= 0 || blocks.length === 0) {
+      return ''
+    }
+
+    const selected: string[] = []
+    let used = 0
+
+    for (const block of blocks) {
+      const separator = selected.length === 0 ? 0 : 2
+      const nextSize = used + separator + block.length
+      if (nextSize <= maxChars) {
+        if (separator > 0) {
+          used += separator
+        }
+        selected.push(block)
+        used += block.length
+        continue
+      }
+
+      if (selected.length === 0) {
+        const truncated = this.truncateBlockBySentence(block, maxChars)
+        if (truncated.length > 0) {
+          selected.push(truncated)
+        }
+      }
+      break
+    }
+
+    return selected.join('\n\n')
+  }
+
+  private truncateBlockBySentence(block: string, maxChars: number): string {
+    if (block.length <= maxChars) {
+      return block
+    }
+
+    const clipped = block.slice(0, maxChars)
+    const sentenceBreak = this.findLastSentenceBreak(clipped)
+    if (sentenceBreak > 0) {
+      return clipped.slice(0, sentenceBreak).trimEnd()
+    }
+
+    const newlineBreak = clipped.lastIndexOf('\n')
+    if (newlineBreak > 0) {
+      return clipped.slice(0, newlineBreak).trimEnd()
+    }
+
+    const wordBreak = clipped.lastIndexOf(' ')
+    if (wordBreak > 0) {
+      return clipped.slice(0, wordBreak).trimEnd()
+    }
+
+    return clipped.trimEnd()
+  }
+
+  private findLastSentenceBreak(text: string): number {
+    for (let i = text.length - 1; i >= 0; i--) {
+      const ch = text[i]
+      if (ch === '.' || ch === '!' || ch === '?') {
+        return i + 1
+      }
+    }
+    return -1
+  }
+
+  private tokenize(input: string): string[] {
+    const cleaned = input.toLowerCase().replace(/[^a-z0-9\s]/g, ' ')
+    const parts = cleaned.split(/\s+/)
+    const unique = new Set<string>()
+
+    for (const part of parts) {
+      if (!part) {
+        continue
+      }
+      if (STOPWORDS.has(part)) {
+        continue
+      }
+      unique.add(part)
+    }
+
+    return Array.from(unique)
+  }
+
+  private resolveMaxTokens(): number {
+    return this.maxTokens ?? Math.max(64, Math.min(1024, Math.floor(this.maxContextChars / 4)))
+  }
+
+  private normalizePositiveInteger(value: number | undefined, fallback: number): number {
+    if (value === undefined) {
+      return fallback
+    }
+    if (!Number.isInteger(value) || value < 1) {
+      throw new Error('Value must be an integer >= 1')
+    }
+    return value
+  }
+
+  private slugify(input: string): string {
+    const normalized = input
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '')
+
+    return normalized || 'general'
+  }
+
+  private routeFileToCollection(
+    rootPath: string,
+    filePath: string,
+    defaultCollectionId: string
+  ): { collectionId: string; reason: string } {
+    const relativeFile = this.normalizePath(path.relative(rootPath, filePath))
+
+    const orderedRules = this.routingRules
+      .map((rule, index) => ({ rule, index }))
+      .sort((a, b) => {
+        const priorityA = a.rule.priority ?? 0
+        const priorityB = b.rule.priority ?? 0
+        if (priorityB !== priorityA) {
+          return priorityB - priorityA
+        }
+        return a.index - b.index
+      })
+
+    for (const { rule } of orderedRules) {
+      if (this.matchRule(rule.pattern, relativeFile)) {
+        return {
+          collectionId: this.slugify(rule.collectionId),
+          reason: `rule:${rule.collectionId}`
+        }
+      }
+    }
+
+    const parts = relativeFile.split('/').filter((part) => part.length > 0)
+    if (parts.length > 1) {
+      return {
+        collectionId: this.slugify(parts[0]),
+        reason: `path:${parts[0]}`
+      }
+    }
+
+    return {
+      collectionId: defaultCollectionId,
+      reason: 'default'
+    }
+  }
+
+  private matchRule(pattern: RegExp, target: string): boolean {
+    pattern.lastIndex = 0
+    return pattern.test(target)
+  }
+
+  private normalizePath(input: string): string {
+    return input.replace(/\\/g, '/')
+  }
+
+  private async collectMarkdownFiles(rootPath: string): Promise<string[]> {
+    const rootStats = await stat(rootPath)
+    if (rootStats.isFile()) {
+      return rootPath.toLowerCase().endsWith('.md') ? [rootPath] : []
+    }
+
+    if (!rootStats.isDirectory()) {
+      return []
+    }
+
+    const results: string[] = []
+    await this.walkMarkdown(rootPath, results)
+    return results
+  }
+
+  private async walkMarkdown(currentPath: string, results: string[]): Promise<void> {
+    const entries = await readdir(currentPath, { withFileTypes: true })
+    entries.sort((a, b) => a.name.localeCompare(b.name))
+
+    for (const entry of entries) {
+      const fullPath = path.join(currentPath, entry.name)
+      if (entry.isDirectory()) {
+        await this.walkMarkdown(fullPath, results)
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+        results.push(fullPath)
+      }
+    }
   }
 }

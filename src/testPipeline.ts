@@ -10,10 +10,12 @@ async function main(): Promise<void> {
 
   await access(testDir)
 
-  engine.createCollection(collectionId)
-  await engine.ingest(collectionId, testDir)
+  const report = await engine.ingestAuto(testDir, { defaultCollectionId: collectionId })
+  if (report.files < 1) {
+    throw new Error('No markdown files found in test directory')
+  }
 
-  const answer = await engine.ask(collectionId, question)
+  const answer = await engine.ask(question, { topCollections: 3, topKPerCollection: 3, maxContextChars: 2000 })
   console.log(answer)
 }
 

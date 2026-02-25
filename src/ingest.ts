@@ -40,6 +40,14 @@ function createDocId(rootPath: string, filePath: string): string {
 export async function ingest(targetPath: string, collection: Collection): Promise<void> {
   const absoluteRoot = path.resolve(targetPath)
   const files = await collectMarkdownFiles(absoluteRoot)
+  await ingestFiles(files, absoluteRoot, collection)
+}
+
+export async function ingestFiles(filePaths: string[], rootPath: string, collection: Collection): Promise<void> {
+  const absoluteRoot = path.resolve(rootPath)
+  const files = [...filePaths]
+    .map((filePath) => path.resolve(filePath))
+    .filter((filePath) => filePath.toLowerCase().endsWith('.md'))
   files.sort((a, b) => a.localeCompare(b))
 
   for (const filePath of files) {
