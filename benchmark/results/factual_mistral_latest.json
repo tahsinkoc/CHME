@@ -1,0 +1,627 @@
+{
+  "runId": "2026-02-25T23-50-48-221Z",
+  "startedAt": "2026-02-25T23:50:48.221Z",
+  "finishedAt": "2026-02-25T23:51:35.862Z",
+  "durationMs": 47641,
+  "config": {
+    "iterations": 2,
+    "liveLlmGrading": true,
+    "model": "mistral-small-latest",
+    "provider": "openai",
+    "openAIBaseUrl": "https://api.mistral.ai/v1",
+    "topK": 5,
+    "topCollections": 3,
+    "topKPerCollection": 3,
+    "dataRoot": "C:\\Users\\tahsi\\OneDrive\\Desktop\\GitFast\\CHME\\benchmark\\data",
+    "goldenPath": "C:\\Users\\tahsi\\OneDrive\\Desktop\\GitFast\\CHME\\benchmark\\factual_golden.json",
+    "snapshotDir": "C:\\Users\\tahsi\\OneDrive\\Desktop\\GitFast\\CHME\\benchmark\\snapshots_factual_mistral",
+    "outputPath": "C:\\Users\\tahsi\\OneDrive\\Desktop\\GitFast\\CHME\\benchmark\\results\\factual_mistral_latest.json"
+  },
+  "dataset": {
+    "files": 15,
+    "collectionsDiscovered": [
+      "compliance",
+      "payments",
+      "risk"
+    ],
+    "expectedCollections": [
+      "compliance",
+      "payments",
+      "risk"
+    ],
+    "checks": {
+      "pass": true,
+      "missingExpectedCollections": [],
+      "invalidCollections": []
+    },
+    "stats": {
+      "compliance": {
+        "documents": 5,
+        "sections": 30,
+        "chunks": 50,
+        "nodes": 85,
+        "keywords": 206
+      },
+      "payments": {
+        "documents": 5,
+        "sections": 30,
+        "chunks": 50,
+        "nodes": 85,
+        "keywords": 215
+      },
+      "risk": {
+        "documents": 5,
+        "sections": 30,
+        "chunks": 50,
+        "nodes": 85,
+        "keywords": 201
+      }
+    }
+  },
+  "snapshot": {
+    "saveReport": {
+      "collections": 3,
+      "files": 4,
+      "snapshotDir": "C:\\Users\\tahsi\\OneDrive\\Desktop\\GitFast\\CHME\\benchmark\\snapshots_factual_mistral"
+    },
+    "loadReport": {
+      "collectionsLoaded": 3,
+      "staleCollectionsReingested": [],
+      "filesChecked": 15
+    },
+    "timingMs": {
+      "ingest": 19.79,
+      "save": 13.08,
+      "load": 7.95
+    },
+    "roundtrip": {
+      "pass": true,
+      "mismatches": []
+    }
+  },
+  "relevance": {
+    "routeTop1Accuracy": 1,
+    "routeRecallAtN": 1,
+    "hitAtK": 0.9167,
+    "mrrAtK": 0.7986,
+    "evidencePrecisionAtK": 0.4,
+    "evidenceRecall": 0.8194
+  },
+  "factuality": {
+    "enabled": true,
+    "meanFactualScore": 0.5943,
+    "meanKeywordCoverage": 0.75,
+    "meanGroundingRatio": 0.4385,
+    "emptyAnswers": 0
+  },
+  "latency": {
+    "routeMs": {
+      "count": 24,
+      "mean": 0.05,
+      "p50": 0.03,
+      "p95": 0.07,
+      "min": 0.03,
+      "max": 0.22
+    },
+    "retrieveMs": {
+      "count": 24,
+      "mean": 0.23,
+      "p50": 0.23,
+      "p95": 0.53,
+      "min": 0.03,
+      "max": 0.7
+    },
+    "askMs": {
+      "count": 24,
+      "mean": 1982.39,
+      "p50": 1898.86,
+      "p95": 3168.77,
+      "min": 915.58,
+      "max": 3227.56
+    }
+  },
+  "queries": [
+    {
+      "id": "compliance_kyc_ownership",
+      "question": "Which controls verify customer identity and beneficial ownership during onboarding?",
+      "expectedPrimaryCollection": "compliance",
+      "acceptedCollections": [
+        "compliance"
+      ],
+      "evidenceDocPrefixes": [
+        "compliance__01-kyc-policy"
+      ],
+      "firstRoute": [
+        "compliance",
+        "payments",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "compliance__01-kyc-policy:2:0",
+        "compliance__01-kyc-policy:1:0",
+        "compliance__01-kyc-policy:5:0",
+        "payments__01-ledger-posting:1:0",
+        "payments__01-ledger-posting:3:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 1,
+        "mrrAtK": 1,
+        "evidencePrecisionAtK": 0.6,
+        "evidenceRecall": 1,
+        "requiredEvidenceCoverage": 1
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 727,
+        "meanKeywordCoverage": 1,
+        "meanGroundingRatio": 0.5152,
+        "meanFactualScore": 0.7576
+      }
+    },
+    {
+      "id": "compliance_aml_escalation",
+      "question": "How does AML monitoring escalate alerts from unusual transaction patterns?",
+      "expectedPrimaryCollection": "compliance",
+      "acceptedCollections": [
+        "compliance"
+      ],
+      "evidenceDocPrefixes": [
+        "compliance__02-aml-monitoring"
+      ],
+      "firstRoute": [
+        "compliance",
+        "payments",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "compliance__02-aml-monitoring:4:0",
+        "compliance__01-kyc-policy:4:0",
+        "compliance__02-aml-monitoring:3:0",
+        "payments__05-fx-pricing-and-fees:4:0",
+        "payments__01-ledger-posting:4:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 1,
+        "mrrAtK": 1,
+        "evidencePrecisionAtK": 0.4,
+        "evidenceRecall": 1,
+        "requiredEvidenceCoverage": 0.4
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 2164.5,
+        "meanKeywordCoverage": 0.4,
+        "meanGroundingRatio": 0.2928,
+        "meanFactualScore": 0.3464
+      }
+    },
+    {
+      "id": "compliance_sanctions_updates",
+      "question": "What process updates sanctions lists and resolves potential name matches?",
+      "expectedPrimaryCollection": "compliance",
+      "acceptedCollections": [
+        "compliance"
+      ],
+      "evidenceDocPrefixes": [
+        "compliance__03-sanctions-screening"
+      ],
+      "firstRoute": [
+        "compliance",
+        "payments",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "compliance__03-sanctions-screening:5:0",
+        "compliance__05-regulatory-reporting:3:0",
+        "compliance__01-kyc-policy:2:0",
+        "payments__01-ledger-posting:3:0",
+        "payments__01-ledger-posting:5:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 1,
+        "mrrAtK": 1,
+        "evidencePrecisionAtK": 0.2,
+        "evidenceRecall": 1,
+        "requiredEvidenceCoverage": 0.25
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 1763,
+        "meanKeywordCoverage": 0.6,
+        "meanGroundingRatio": 0.6135,
+        "meanFactualScore": 0.6068
+      }
+    },
+    {
+      "id": "compliance_chargeback_sanctions",
+      "question": "How are chargeback alerts with sanctions exposure escalated and documented?",
+      "expectedPrimaryCollection": "compliance",
+      "acceptedCollections": [
+        "compliance",
+        "payments"
+      ],
+      "evidenceDocPrefixes": [
+        "compliance__03-sanctions-screening",
+        "payments__04-chargeback-lifecycle"
+      ],
+      "firstRoute": [
+        "compliance",
+        "payments",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "compliance__01-kyc-policy:3:0",
+        "compliance__02-aml-monitoring:3:0",
+        "compliance__03-sanctions-screening:3:0",
+        "payments__01-ledger-posting:3:0",
+        "payments__02-idempotency-keys:3:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 1,
+        "mrrAtK": 0.3333,
+        "evidencePrecisionAtK": 0.2,
+        "evidenceRecall": 0.5,
+        "requiredEvidenceCoverage": 0.5
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 1424.5,
+        "meanKeywordCoverage": 0.8,
+        "meanGroundingRatio": 0.2252,
+        "meanFactualScore": 0.5126
+      }
+    },
+    {
+      "id": "payments_ledger_balance",
+      "question": "How does ledger posting enforce balanced double entry for each transaction?",
+      "expectedPrimaryCollection": "payments",
+      "acceptedCollections": [
+        "payments"
+      ],
+      "evidenceDocPrefixes": [
+        "payments__01-ledger-posting"
+      ],
+      "firstRoute": [
+        "payments",
+        "compliance",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "payments__01-ledger-posting:2:0",
+        "payments__01-ledger-posting:3:0",
+        "payments__01-ledger-posting:1:0",
+        "compliance__02-aml-monitoring:2:0",
+        "compliance__01-kyc-policy:2:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 1,
+        "mrrAtK": 1,
+        "evidencePrecisionAtK": 0.6,
+        "evidenceRecall": 1,
+        "requiredEvidenceCoverage": 1
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 1580.5,
+        "meanKeywordCoverage": 1,
+        "meanGroundingRatio": 0.4637,
+        "meanFactualScore": 0.7318
+      }
+    },
+    {
+      "id": "payments_idempotency",
+      "question": "What is the idempotency key strategy for retrying customer payment requests?",
+      "expectedPrimaryCollection": "payments",
+      "acceptedCollections": [
+        "payments"
+      ],
+      "evidenceDocPrefixes": [
+        "payments__02-idempotency-keys"
+      ],
+      "firstRoute": [
+        "payments",
+        "risk",
+        "compliance"
+      ],
+      "firstRetrievedNodeIds": [
+        "payments__02-idempotency-keys:2:0",
+        "payments__02-idempotency-keys:3:0",
+        "payments__02-idempotency-keys:4:0",
+        "risk__03-velocity-rules:3:0",
+        "risk__01-risk-score-model:3:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 1,
+        "mrrAtK": 1,
+        "evidencePrecisionAtK": 0.6,
+        "evidenceRecall": 1,
+        "requiredEvidenceCoverage": 0.6
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 1457.5,
+        "meanKeywordCoverage": 0.8,
+        "meanGroundingRatio": 0.4827,
+        "meanFactualScore": 0.6414
+      }
+    },
+    {
+      "id": "payments_settlement_breaks",
+      "question": "How are settlement breaks reconciled when provider files arrive late?",
+      "expectedPrimaryCollection": "payments",
+      "acceptedCollections": [
+        "payments"
+      ],
+      "evidenceDocPrefixes": [
+        "payments__03-settlement-reconciliation"
+      ],
+      "firstRoute": [
+        "payments",
+        "risk",
+        "compliance"
+      ],
+      "firstRetrievedNodeIds": [
+        "payments__03-settlement-reconciliation:1:0",
+        "payments__03-settlement-reconciliation:2:0",
+        "payments__03-settlement-reconciliation:3:0",
+        "risk__05-incident-response:4:0",
+        "risk__05-incident-response:5:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 1,
+        "mrrAtK": 1,
+        "evidencePrecisionAtK": 0.6,
+        "evidenceRecall": 1,
+        "requiredEvidenceCoverage": 0.6
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 1473,
+        "meanKeywordCoverage": 0.8,
+        "meanGroundingRatio": 0.4233,
+        "meanFactualScore": 0.6116
+      }
+    },
+    {
+      "id": "payments_chargeback_limit_signals",
+      "question": "How does chargeback handling coordinate with risk limit and fraud signals?",
+      "expectedPrimaryCollection": "payments",
+      "acceptedCollections": [
+        "payments",
+        "risk",
+        "compliance"
+      ],
+      "evidenceDocPrefixes": [
+        "payments__04-chargeback-lifecycle",
+        "risk__04-limit-management",
+        "risk__02-fraud-signals"
+      ],
+      "firstRoute": [
+        "compliance",
+        "payments",
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "compliance__01-kyc-policy:3:0",
+        "compliance__02-aml-monitoring:3:0",
+        "compliance__03-sanctions-screening:3:0",
+        "payments__04-chargeback-lifecycle:3:0",
+        "payments__01-ledger-posting:3:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 1,
+        "mrrAtK": 0.25,
+        "evidencePrecisionAtK": 0.2,
+        "evidenceRecall": 0.3333,
+        "requiredEvidenceCoverage": 0.4
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 1275,
+        "meanKeywordCoverage": 0.9,
+        "meanGroundingRatio": 0.2468,
+        "meanFactualScore": 0.5734
+      }
+    },
+    {
+      "id": "risk_model_calibration",
+      "question": "How is the risk score model calibrated when false negatives increase?",
+      "expectedPrimaryCollection": "risk",
+      "acceptedCollections": [
+        "risk"
+      ],
+      "evidenceDocPrefixes": [
+        "risk__01-risk-score-model"
+      ],
+      "firstRoute": [
+        "risk",
+        "compliance"
+      ],
+      "firstRetrievedNodeIds": [
+        "risk__01-risk-score-model:1:0",
+        "risk__01-risk-score-model:3:0",
+        "risk__01-risk-score-model:4:0",
+        "compliance__01-kyc-policy:2:0",
+        "compliance__02-aml-monitoring:5:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 1,
+        "mrrAtK": 1,
+        "evidencePrecisionAtK": 0.6,
+        "evidenceRecall": 1,
+        "requiredEvidenceCoverage": 0.6667
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 1791.5,
+        "meanKeywordCoverage": 0.6,
+        "meanGroundingRatio": 0.4797,
+        "meanFactualScore": 0.5399
+      }
+    },
+    {
+      "id": "risk_signal_aggregation",
+      "question": "Which fraud signals are aggregated before blocking a transaction?",
+      "expectedPrimaryCollection": "risk",
+      "acceptedCollections": [
+        "risk"
+      ],
+      "evidenceDocPrefixes": [
+        "risk__02-fraud-signals"
+      ],
+      "firstRoute": [
+        "risk",
+        "payments",
+        "compliance"
+      ],
+      "firstRetrievedNodeIds": [
+        "risk__02-fraud-signals:3:0",
+        "risk__05-incident-response:4:0",
+        "risk__01-risk-score-model:3:0",
+        "payments__01-ledger-posting:3:0",
+        "payments__01-ledger-posting:4:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 1,
+        "mrrAtK": 1,
+        "evidencePrecisionAtK": 0.2,
+        "evidenceRecall": 1,
+        "requiredEvidenceCoverage": 0.6
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 807,
+        "meanKeywordCoverage": 0.9,
+        "meanGroundingRatio": 0.5247,
+        "meanFactualScore": 0.7123
+      }
+    },
+    {
+      "id": "risk_velocity_controls",
+      "question": "How do velocity rules prevent rapid attack attempts without over blocking?",
+      "expectedPrimaryCollection": "risk",
+      "acceptedCollections": [
+        "risk"
+      ],
+      "evidenceDocPrefixes": [
+        "risk__03-velocity-rules"
+      ],
+      "firstRoute": [
+        "risk"
+      ],
+      "firstRetrievedNodeIds": [
+        "risk__03-velocity-rules:4:0",
+        "risk__03-velocity-rules:1:0",
+        "risk__03-velocity-rules:3:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 1,
+        "mrrAtK": 1,
+        "evidencePrecisionAtK": 0.6,
+        "evidenceRecall": 1,
+        "requiredEvidenceCoverage": 0.3333
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 1031,
+        "meanKeywordCoverage": 0.6,
+        "meanGroundingRatio": 0.537,
+        "meanFactualScore": 0.5685
+      }
+    },
+    {
+      "id": "risk_limit_exposure",
+      "question": "What steps reduce exposure when dynamic customer limits are near saturation?",
+      "expectedPrimaryCollection": "risk",
+      "acceptedCollections": [
+        "risk"
+      ],
+      "evidenceDocPrefixes": [
+        "risk__04-limit-management",
+        "risk__05-incident-response"
+      ],
+      "firstRoute": [
+        "risk",
+        "compliance",
+        "payments"
+      ],
+      "firstRetrievedNodeIds": [
+        "risk__01-risk-score-model:3:0",
+        "risk__02-fraud-signals:3:0",
+        "risk__03-velocity-rules:3:0",
+        "compliance__01-kyc-policy:3:0",
+        "compliance__02-aml-monitoring:3:0"
+      ],
+      "relevance": {
+        "routeTop1Accuracy": 1,
+        "routeRecallAtN": 1,
+        "hitAtK": 0,
+        "mrrAtK": 0,
+        "evidencePrecisionAtK": 0,
+        "evidenceRecall": 0,
+        "requiredEvidenceCoverage": 0.4
+      },
+      "factuality": {
+        "enabled": true,
+        "askRuns": 2,
+        "emptyAnswers": 0,
+        "avgAnswerChars": 577,
+        "meanKeywordCoverage": 0.6,
+        "meanGroundingRatio": 0.4576,
+        "meanFactualScore": 0.5288
+      }
+    }
+  ],
+  "thresholds": {
+    "routeRecallAtN": 0.95,
+    "hitAtK": 0.85,
+    "mrrAtK": 0.6,
+    "meanFactualScore": 0.6,
+    "snapshotRoundtrip": true
+  },
+  "overallPass": false
+}
