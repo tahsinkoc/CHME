@@ -73,6 +73,7 @@ new MemoryEngine({
   localUrl?: string
   openAIBaseUrl?: string
   openAIApiKey?: string
+  snapshotDir?: string
 })
 ```
 
@@ -106,8 +107,8 @@ ask(question: string, options?: AskGlobalOptions): Promise<string> // global
 ### Snapshot
 
 ```ts
-saveSnapshots(snapshotDir: string): Promise<SnapshotSaveReport>
-loadSnapshots(snapshotDir: string, options?: SnapshotLoadOptions): Promise<SnapshotLoadReport>
+saveSnapshots(snapshotDir?: string): Promise<SnapshotSaveReport>
+loadSnapshots(snapshotDir?: string, options?: SnapshotLoadOptions): Promise<SnapshotLoadReport>
 ```
 
 ### Runtime settings
@@ -122,6 +123,8 @@ setProvider(provider: 'local' | 'openai'): void
 setLocalUrl(url: string): void
 setOpenAIBaseUrl(url: string): void
 setOpenAIApiKey(apiKey: string): void
+setSnapshotDir(dir: string): void
+getSnapshotDir(): string
 ```
 
 ## 5) Fastest start (global ask)
@@ -217,6 +220,20 @@ const loadReport = await engine.loadSnapshots('./snapshots', {
   sourceRootPath: './knowledge'
 })
 console.log(loadReport)
+```
+
+### Snapshot path precedence
+
+Snapshot path resolution order:
+
+1. Method parameter
+2. Engine default (`snapshotDir` constructor option or `setSnapshotDir`)
+3. Fallback `./snapshots`
+
+```ts
+const engine = new MemoryEngine({ snapshotDir: './runtime-snapshots' })
+await engine.saveSnapshots() // ./runtime-snapshots
+await engine.saveSnapshots('./custom-snapshots') // override
 ```
 
 `loadSnapshots` behavior:
@@ -338,6 +355,13 @@ npm run test:ollama
 
 # Basic pipeline smoke run
 npm run pipeline
+```
+
+Optional custom snapshot path:
+
+```bash
+npm run verify -- --snapshot-dir ./tmp/chme-verify
+npm run test:ollama:dry -- --snapshot-dir ./tmp/chme-ollama
 ```
 
 ## 15) FAQ

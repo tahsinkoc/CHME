@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import path from 'node:path'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { MemoryEngine } from '../src/MemoryEngine'
 
@@ -28,12 +28,24 @@ const SCENARIOS: Scenario[] = [
   }
 ]
 
+const SNAPSHOT_DIR_ARG = '--snapshot-dir'
+const SNAPSHOT_DIR_ENV = 'CHME_SNAPSHOT_DIR'
+
 async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run')
   const testDir = path.resolve(process.cwd(), 'test')
   const localUrl = process.env.LOCAL_LLM_URL || 'http://localhost:11434/api/generate'
-  const tempRoot = await mkdtemp(path.join(tmpdir(), 'chme-ollama-snapshot-'))
-  const snapshotDir = path.join(tempRoot, 'snapshots')
+  const configuredSnapshotDir = readArgValue(SNAPSHOT_DIR_ARG) || process.env[SNAPSHOT_DIR_ENV]
+  let tempRoot: string | undefined
+  let snapshotDir: string
+
+  if (configuredSnapshotDir && configuredSnapshotDir.trim().length > 0) {
+    snapshotDir = path.resolve(configuredSnapshotDir)
+    await mkdir(snapshotDir, { recursive: true })
+  } else {
+    tempRoot = await mkdtemp(path.join(tmpdir(), 'chme-ollama-snapshot-'))
+    snapshotDir = path.join(tempRoot, 'snapshots')
+  }
 
   try {
     const seedEngine = new MemoryEngine({
@@ -42,7 +54,8 @@ async function main(): Promise<void> {
       maxContextChars: 2000,
       temperature: 0,
       provider: 'local',
-      localUrl
+      localUrl,
+      snapshotDir
     })
 
     seedEngine.setRoutingRules([
@@ -54,7 +67,7 @@ async function main(): Promise<void> {
     assert.ok(ingestReport.files >= 5, 'En az 5 markdown dosyasi ingest edilmeli')
     assert.equal(ingestReport.assignments.length, ingestReport.files)
 
-    const saveReport = await seedEngine.saveSnapshots(snapshotDir)
+    const saveReport = await seedEngine.saveSnapshots()
     assert.ok(saveReport.collections >= 1)
 
     const engine = new MemoryEngine({
@@ -63,10 +76,11 @@ async function main(): Promise<void> {
       maxContextChars: 2000,
       temperature: 0,
       provider: 'local',
-      localUrl
+      localUrl,
+      snapshotDir
     })
 
-    const loadReport = await engine.loadSnapshots(snapshotDir, { sourceRootPath: testDir })
+    const loadReport = await engine.loadSnapshots(undefined, { sourceRootPath: testDir })
     assert.ok(loadReport.collectionsLoaded >= 1)
 
     const routingReport = engine.getRoutingReport()
@@ -145,8 +159,24 @@ async function main(): Promise<void> {
 
     console.log('\nDetailed Ollama scenario test passed')
   } finally {
-    await rm(tempRoot, { recursive: true, force: true })
+    if (tempRoot) {
+      await rm(tempRoot, { recursive: true, force: true })
+    }
   }
+}
+
+function readArgValue(flag: string): string | undefined {
+  const index = process.argv.indexOf(flag)
+  if (index < 0) {
+    return undefined
+  }
+
+  const value = process.argv[index + 1]
+  if (!value || value.startsWith('--')) {
+    return undefined
+  }
+
+  return value
 }
 
 main().catch((error: unknown) => {

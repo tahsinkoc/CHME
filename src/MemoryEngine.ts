@@ -21,6 +21,7 @@ type MemoryEngineOptions = {
   localUrl?: string
   openAIBaseUrl?: string
   openAIApiKey?: string
+  snapshotDir?: string
 }
 
 export type RoutingRule = {
@@ -120,6 +121,7 @@ type EngineSnapshotManifest = {
 const SNAPSHOT_SCHEMA_VERSION = 1
 const SNAPSHOT_EXTENSION = '.chme.json.gz'
 const ENGINE_SNAPSHOT_FILE = `_engine${SNAPSHOT_EXTENSION}`
+const DEFAULT_SNAPSHOT_DIR = './snapshots'
 const DEFAULT_TOP_COLLECTIONS = 3
 const DEFAULT_TOP_K_PER_COLLECTION = 3
 const DEFAULT_MIN_ROUTE_SCORE = 1
@@ -148,6 +150,7 @@ export class MemoryEngine {
   private lastDefaultCollectionId: string
   private lastSourceFiles: SnapshotFileMeta[]
   private collectionToFiles: Map<string, string[]>
+  private snapshotDir?: string
 
   constructor(options: MemoryEngineOptions = {}) {
     this.collections = new Map()
@@ -167,6 +170,7 @@ export class MemoryEngine {
     this.lastDefaultCollectionId = 'general'
     this.lastSourceFiles = []
     this.collectionToFiles = new Map()
+    this.snapshotDir = undefined
 
     if (options.model !== undefined) {
       this.setModel(options.model)
@@ -182,6 +186,9 @@ export class MemoryEngine {
     }
     if (options.maxTokens !== undefined) {
       this.setMaxTokens(options.maxTokens)
+    }
+    if (options.snapshotDir !== undefined) {
+      this.setSnapshotDir(options.snapshotDir)
     }
   }
 
@@ -412,8 +419,8 @@ export class MemoryEngine {
     return await generateAnswer(collection, question, topK, maxContextChars)
   }
 
-  async saveSnapshots(snapshotDir: string): Promise<SnapshotSaveReport> {
-    const absoluteSnapshotDir = path.resolve(snapshotDir)
+  async saveSnapshots(snapshotDir?: string): Promise<SnapshotSaveReport> {
+    const absoluteSnapshotDir = this.resolveSnapshotDir(snapshotDir)
     await mkdir(absoluteSnapshotDir, { recursive: true })
 
     const collectionIds = Array.from(this.collections.keys()).sort((a, b) => a.localeCompare(b))
@@ -454,8 +461,8 @@ export class MemoryEngine {
     }
   }
 
-  async loadSnapshots(snapshotDir: string, options: SnapshotLoadOptions = {}): Promise<SnapshotLoadReport> {
-    const absoluteSnapshotDir = path.resolve(snapshotDir)
+  async loadSnapshots(snapshotDir?: string, options: SnapshotLoadOptions = {}): Promise<SnapshotLoadReport> {
+    const absoluteSnapshotDir = this.resolveSnapshotDir(snapshotDir)
     const manifestPath = path.join(absoluteSnapshotDir, ENGINE_SNAPSHOT_FILE)
     const manifest = await this.readGzipJson<EngineSnapshotManifest>(manifestPath)
 
@@ -641,6 +648,17 @@ export class MemoryEngine {
       throw new Error('openAIApiKey must be a non-empty string')
     }
     this.openAIApiKey = apiKey
+  }
+
+  setSnapshotDir(dir: string): void {
+    if (!dir || dir.trim().length === 0) {
+      throw new Error('snapshotDir must be a non-empty string')
+    }
+    this.snapshotDir = path.resolve(dir)
+  }
+
+  getSnapshotDir(): string {
+    return this.resolveSnapshotDir()
   }
 
   private async askScoped(collectionId: string, question: string): Promise<string> {
@@ -1029,15 +1047,31 @@ export class MemoryEngine {
     return path.join(snapshotDir, `${encodedId}${SNAPSHOT_EXTENSION}`)
   }
 
+  private resolveSnapshotDir(snapshotDir?: string): string {
+    const rawPath = snapshotDir ?? this.snapshotDir ?? DEFAULT_SNAPSHOT_DIR
+    if (!rawPath || rawPath.trim().length === 0) {
+      throw new Error('snapshotDir must be a non-empty string')
+    }
+    return path.resolve(rawPath)
+  }
+
   private async writeGzipJson(filePath: string, value: unknown): Promise<void> {
-    const json = JSON.stringify(value)
-    const compressed = await gzip(Buffer.from(json, 'utf8'))
-    await writeFile(filePath, compressed)
+    try {
+      const json = JSON.stringify(value)
+      const compressed = await gzip(Buffer.from(json, 'utf8'))
+      await writeFile(filePath, compressed)
+    } catch {
+      throw new Error(`Failed to write snapshot file: ${filePath}`)
+    }
   }
 
   private async readGzipJson<T>(filePath: string): Promise<T> {
-    const compressed = await readFile(filePath)
-    const jsonBuffer = await gunzip(compressed)
-    return JSON.parse(jsonBuffer.toString('utf8')) as T
+    try {
+      const compressed = await readFile(filePath)
+      const jsonBuffer = await gunzip(compressed)
+      return JSON.parse(jsonBuffer.toString('utf8')) as T
+    } catch {
+      throw new Error(`Failed to read snapshot file: ${filePath}`)
+    }
   }
 }
