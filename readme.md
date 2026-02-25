@@ -52,6 +52,36 @@ async function main() {
 }
 ```
 
+## OpenAI-compatible provider usage (Mistral example)
+
+```ts
+import { MemoryEngine } from './src/MemoryEngine'
+
+async function main() {
+  const engine = new MemoryEngine({
+    provider: 'openai',
+    model: 'mistral-small-latest',
+    openAIBaseUrl: 'https://api.mistral.ai/v1',
+    openAIApiKey: process.env.MISTRAL_API_KEY,
+    snapshotDir: './snapshots',
+    temperature: 0
+  })
+
+  await engine.ingestAuto('./test', { defaultCollectionId: 'general' })
+  const answer = await engine.ask('What is the main topic of the files?')
+  console.log(answer)
+}
+```
+
+Provider switch notes:
+
+1. `provider: 'local'` -> local endpoint flow (default local URL points to Ollama generate API).
+2. `provider: 'openai'` -> OpenAI-compatible `POST /chat/completions` flow.
+
+Failure behavior note:
+
+1. If endpoint/auth/response parsing fails, current `callLLM` contract returns an empty string.
+
 ## Snapshot path selection
 
 Path resolution for snapshots:
