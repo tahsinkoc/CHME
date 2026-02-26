@@ -1,5 +1,12 @@
 # Compact Hierarchical Memory Engine (CHME)
 
+<p align="center">
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js"></a>
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/Version-1.0.0-blue?style=for-the-badge" alt="Version">
+</p>
+
 CHME is a **compact, in-memory, hierarchical memory orchestration engine** written in TypeScript. It provides a structured memory system for Large Language Models (LLM) and automatically extracts, indexes, and queries information from markdown-based documents.
 
 ## Core Flow
@@ -369,3 +376,20 @@ console.log(prompt)
 
 **Version:** 1.0.0  
 **Last Updated:** 2026-02-26
+
+## 🚧 Roadmap & Improvement Areas
+
+We are actively working on improving CHME. Current focus areas include:
+
+### 1. Reranking Strategy
+A reranking layer is planned to improve retrieval precision. The current keyword-based retrieval provides fast candidate generation, but a learned reranker will help filter and rank the most relevant chunks before context construction.
+
+### 2. Factual Accuracy Improvement
+Current factual accuracy: **0.546 - 0.59**  
+Target: **0.80+**
+
+Key improvements planned:
+- Hybrid retrieval (keyword + semantic embeddings)
+- Better chunk boundary detection
+- Improved prompt engineering
+- Enhanced evidence coverage metrics
