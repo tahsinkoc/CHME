@@ -359,8 +359,7 @@ console.log(prompt)
 
 ## Future Work
 
-- [ ] Vector-based semantic search
-- [ ] Dynamic routing via LLM
+
 - [ ] Multi-lingual support
 - [ ] Response caching
 - [ ] Learned rerankers
