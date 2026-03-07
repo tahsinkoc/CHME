@@ -367,18 +367,18 @@ console.log(prompt)
 ## Future Work
 
 
-- [ ] Multi-lingual support
-- [ ] Response caching
-- [ ] Learned rerankers
+- Multi-lingual support
+- Response caching
+- Learned rerankers
 
 ---
 
 **Version:** 1.0.0  
 **Last Updated:** 2026-02-26
 
-## 🚧 Roadmap & Improvement Areas
+## Roadmap & Improvement Areas
 
-We are actively working on improving CHME. Current focus areas include:
+CHME is actively being improved. Current focus areas include:
 
 ### 1. Reranking Strategy
 A reranking layer is planned to improve retrieval precision. The current keyword-based retrieval provides fast candidate generation, but a learned reranker will help filter and rank the most relevant chunks before context construction.
