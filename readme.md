@@ -363,6 +363,7 @@ console.log(prompt)
 | [`usage.md`](usage.md) | Turkish usage guide |
 | [`MEMORY_ENGINE_STATUS.md`](MEMORY_ENGINE_STATUS.md) | Current status and capabilities |
 | [`benchmark/README.md`](benchmark/README.md) | Benchmark documentation |
+| [Technical Paper](https://tahsinkoc.com/papers/chme-hierarchical-memory-engine) | Academic paper on CHME |
 
 ## Future Work
 
