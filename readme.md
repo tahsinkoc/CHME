@@ -26,7 +26,7 @@ By default, `ask()` is now **deterministic and evidence-grounded**, so you can u
 |---------|-------------|
 | **Multi-Collection Support** | Manages multiple topic domains in isolated collections |
 | **Auto-Routing** | Routes queries to correct collections via regex-based rules |
-| **Keyword Indexing** | Section-aware chunk-level search |
+| **Hybrid Retrieval** | Combines lexical chunk search with embedding similarity for better recall |
 | **Grounded Answers by Default** | `ask()` returns extractive, evidence-backed answers without requiring an LLM |
 | **Local LLM Support** | Ollama integration for local inference |
 | **Cloud LLM Support** | OpenAI-compatible APIs (Mistral, OpenAI, etc.) |
@@ -66,6 +66,13 @@ main().catch(console.error)
 
 ## Supported Providers
 
+### Hybrid Retrieval Defaults
+
+`MemoryEngine` now hydrates chunk embeddings during ingest and uses a hybrid retriever inside `retrieve()` and `ask()`.
+
+- If you configure an OpenAI-compatible provider, CHME will use real embeddings automatically.
+- If no embedding endpoint is configured, CHME falls back to deterministic local embeddings so retrieval still works offline and in tests.
+
 ### Local (Ollama)
 
 ```typescript
@@ -73,6 +80,8 @@ const engine = new MemoryEngine({
   provider: 'local',
   localUrl: 'http://localhost:11434/api/generate',
   model: 'qwen2.5:7b',
+  embeddingModel: 'nomic-embed-text',
+  localEmbeddingUrl: 'http://localhost:11434/api/embeddings',
   temperature: 0
 })
 ```
@@ -93,6 +102,7 @@ const answer = await engine.askWithLLM('Summarize the main risks across the file
 const engine = new MemoryEngine({
   provider: 'openai',
   model: 'mistral-small-latest',
+  embeddingModel: 'mistral-embed',
   openAIBaseUrl: 'https://api.mistral.ai/v1',
   openAIApiKey: process.env.MISTRAL_API_KEY,
   temperature: 0
@@ -212,6 +222,9 @@ Markdown File
 | `maxTokens` | number | - | Maximum tokens for generation |
 | `provider` | `'local'` \| `'openai'` | `'local'` | LLM provider |
 | `localUrl` | string | `http://localhost:11434/api/generate` | Ollama endpoint |
+| `embeddingModel` | string | auto/deterministic | Embedding model for hybrid retrieval |
+| `localEmbeddingUrl` | string | inferred | Local embedding endpoint |
+| `embeddingDimensions` | number | `192` | Dimension count for deterministic fallback embeddings |
 | `openAIBaseUrl` | string | - | OpenAI-compatible API URL |
 | `openAIApiKey` | string | - | API key |
 | `snapshotDir` | string | `./snapshots` | Snapshot directory |

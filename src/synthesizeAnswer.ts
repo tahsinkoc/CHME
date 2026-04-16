@@ -43,7 +43,7 @@ export function synthesizeAnswer(
       const uncoveredMatches = rawQuestionTokens.reduce((count, token) => {
         return count + (candidate.rawTokenSet.has(token) && !coveredTokens.has(token) ? 1 : 0)
       }, 0)
-      const repeatedDocPenalty = (docCounts.get(candidate.docId) || 0) * 0.75
+      const repeatedDocPenalty = (docCounts.get(candidate.docId) || 0) * 0.15
       const adjustedScore = candidate.baseScore + (uncoveredMatches * 4) - repeatedDocPenalty
 
       if (adjustedScore > bestScore) {
@@ -63,9 +63,6 @@ export function synthesizeAnswer(
 
     const candidate = candidates[bestIndex]
     if (!candidate) {
-      break
-    }
-    if (candidate.baseScore <= 0 && selected.length > 0) {
       break
     }
 

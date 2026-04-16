@@ -1,8 +1,8 @@
 {
-  "runId": "2026-04-16T13-30-51-559Z",
-  "startedAt": "2026-04-16T13:30:51.559Z",
-  "finishedAt": "2026-04-16T13:30:51.703Z",
-  "durationMs": 144,
+  "runId": "2026-04-16T14-03-11-220Z",
+  "startedAt": "2026-04-16T14:03:11.220Z",
+  "finishedAt": "2026-04-16T14:03:16.396Z",
+  "durationMs": 5176,
   "config": {
     "iterations": 2,
     "liveLlmGrading": true,
@@ -70,9 +70,9 @@
       "filesChecked": 15
     },
     "timingMs": {
-      "ingest": 21.25,
-      "save": 13.78,
-      "load": 9.4
+      "ingest": 2149.22,
+      "save": 113.69,
+      "load": 34.72
     },
     "roundtrip": {
       "pass": true,
@@ -83,41 +83,41 @@
     "routeTop1Accuracy": 1,
     "routeRecallAtN": 1,
     "hitAtK": 1,
-    "mrrAtK": 0.8403,
-    "evidencePrecisionAtK": 0.5,
+    "mrrAtK": 0.9167,
+    "evidencePrecisionAtK": 0.25,
     "evidenceRecall": 0.8611
   },
   "factuality": {
     "enabled": true,
-    "meanFactualScore": 0.8167,
-    "meanKeywordCoverage": 0.6333,
+    "meanFactualScore": 0.775,
+    "meanKeywordCoverage": 0.55,
     "meanGroundingRatio": 1,
     "emptyAnswers": 0
   },
   "latency": {
     "routeMs": {
       "count": 24,
-      "mean": 0.04,
-      "p50": 0.03,
-      "p95": 0.05,
-      "min": 0.01,
-      "max": 0.23
+      "mean": 114.29,
+      "p50": 96.85,
+      "p95": 261.64,
+      "min": 0.18,
+      "max": 304.66
     },
     "retrieveMs": {
       "count": 24,
-      "mean": 1.5,
-      "p50": 1.75,
-      "p95": 2.13,
-      "min": 0.3,
-      "max": 3.46
+      "mean": 2.29,
+      "p50": 2.08,
+      "p95": 4.34,
+      "min": 0.6,
+      "max": 5.27
     },
     "askMs": {
       "count": 24,
-      "mean": 1.8,
-      "p50": 1.88,
-      "p95": 3.27,
-      "min": 0.52,
-      "max": 3.87
+      "mean": 2.72,
+      "p50": 2.5,
+      "p95": 4.43,
+      "min": 0.93,
+      "max": 5.63
     }
   },
   "queries": [
@@ -138,8 +138,8 @@
       ],
       "firstRetrievedNodeIds": [
         "compliance__01-kyc-policy:2:0",
-        "compliance__01-kyc-policy:5:0",
-        "compliance__01-kyc-policy:1:0",
+        "compliance__04-audit-trail-controls:4:0",
+        "compliance__02-aml-monitoring:4:0",
         "payments__05-fx-pricing-and-fees:4:0",
         "payments__01-ledger-posting:4:0"
       ],
@@ -148,18 +148,18 @@
         "routeRecallAtN": 1,
         "hitAtK": 1,
         "mrrAtK": 1,
-        "evidencePrecisionAtK": 0.6,
+        "evidencePrecisionAtK": 0.2,
         "evidenceRecall": 1,
-        "requiredEvidenceCoverage": 1
+        "requiredEvidenceCoverage": 0.75
       },
       "factuality": {
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 1012,
-        "meanKeywordCoverage": 1,
+        "avgAnswerChars": 820,
+        "meanKeywordCoverage": 0.8,
         "meanGroundingRatio": 1,
-        "meanFactualScore": 1
+        "meanFactualScore": 0.9
       }
     },
     {
@@ -174,33 +174,33 @@
       ],
       "firstRoute": [
         "compliance",
-        "payments",
-        "risk"
+        "risk",
+        "payments"
       ],
       "firstRetrievedNodeIds": [
         "compliance__02-aml-monitoring:4:0",
-        "compliance__02-aml-monitoring:2:0",
         "compliance__01-kyc-policy:4:0",
-        "payments__05-fx-pricing-and-fees:4:0",
-        "payments__01-ledger-posting:4:0"
+        "compliance__03-sanctions-screening:4:0",
+        "risk__02-fraud-signals:4:0",
+        "risk__05-incident-response:4:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
         "routeRecallAtN": 1,
         "hitAtK": 1,
         "mrrAtK": 1,
-        "evidencePrecisionAtK": 0.4,
+        "evidencePrecisionAtK": 0.2,
         "evidenceRecall": 1,
-        "requiredEvidenceCoverage": 0.6
+        "requiredEvidenceCoverage": 0.4
       },
       "factuality": {
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 615,
-        "meanKeywordCoverage": 0.8,
+        "avgAnswerChars": 663,
+        "meanKeywordCoverage": 0.2,
         "meanGroundingRatio": 1,
-        "meanFactualScore": 0.9
+        "meanFactualScore": 0.6
       }
     },
     {
@@ -220,8 +220,8 @@
       ],
       "firstRetrievedNodeIds": [
         "compliance__03-sanctions-screening:5:0",
-        "compliance__03-sanctions-screening:2:0",
-        "compliance__03-sanctions-screening:4:0",
+        "compliance__01-kyc-policy:4:0",
+        "compliance__05-regulatory-reporting:5:0",
         "payments__01-ledger-posting:5:0",
         "payments__02-idempotency-keys:5:0"
       ],
@@ -230,7 +230,7 @@
         "routeRecallAtN": 1,
         "hitAtK": 1,
         "mrrAtK": 1,
-        "evidencePrecisionAtK": 0.6,
+        "evidencePrecisionAtK": 0.2,
         "evidenceRecall": 1,
         "requiredEvidenceCoverage": 0.25
       },
@@ -238,10 +238,10 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 789,
-        "meanKeywordCoverage": 0.6,
+        "avgAnswerChars": 847,
+        "meanKeywordCoverage": 0.4,
         "meanGroundingRatio": 1,
-        "meanFactualScore": 0.8
+        "meanFactualScore": 0.7
       }
     },
     {
@@ -263,28 +263,28 @@
       ],
       "firstRetrievedNodeIds": [
         "compliance__01-kyc-policy:4:0",
-        "compliance__01-kyc-policy:5:0",
         "compliance__03-sanctions-screening:1:0",
+        "compliance__02-aml-monitoring:2:0",
         "risk__04-limit-management:2:0",
-        "risk__04-limit-management:5:0"
+        "risk__01-risk-score-model:4:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
         "routeRecallAtN": 1,
         "hitAtK": 1,
-        "mrrAtK": 0.3333,
+        "mrrAtK": 0.5,
         "evidencePrecisionAtK": 0.2,
         "evidenceRecall": 0.5,
-        "requiredEvidenceCoverage": 0.5
+        "requiredEvidenceCoverage": 0.25
       },
       "factuality": {
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 728,
-        "meanKeywordCoverage": 0.2,
+        "avgAnswerChars": 945,
+        "meanKeywordCoverage": 0.6,
         "meanGroundingRatio": 1,
-        "meanFactualScore": 0.6
+        "meanFactualScore": 0.8
       }
     },
     {
@@ -304,8 +304,8 @@
       ],
       "firstRetrievedNodeIds": [
         "payments__01-ledger-posting:2:0",
-        "payments__01-ledger-posting:1:0",
-        "payments__01-ledger-posting:5:0",
+        "payments__02-idempotency-keys:4:0",
+        "payments__03-settlement-reconciliation:4:0",
         "risk__03-velocity-rules:2:0",
         "risk__01-risk-score-model:4:0"
       ],
@@ -314,18 +314,18 @@
         "routeRecallAtN": 1,
         "hitAtK": 1,
         "mrrAtK": 1,
-        "evidencePrecisionAtK": 0.6,
+        "evidencePrecisionAtK": 0.2,
         "evidenceRecall": 1,
-        "requiredEvidenceCoverage": 1
+        "requiredEvidenceCoverage": 0.8
       },
       "factuality": {
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 742,
-        "meanKeywordCoverage": 1,
+        "avgAnswerChars": 832,
+        "meanKeywordCoverage": 0.8,
         "meanGroundingRatio": 1,
-        "meanFactualScore": 1
+        "meanFactualScore": 0.9
       }
     },
     {
@@ -345,8 +345,8 @@
       ],
       "firstRetrievedNodeIds": [
         "payments__02-idempotency-keys:2:0",
-        "payments__02-idempotency-keys:4:0",
-        "payments__02-idempotency-keys:5:0",
+        "payments__01-ledger-posting:4:0",
+        "payments__03-settlement-reconciliation:4:0",
         "risk__01-risk-score-model:4:0",
         "risk__02-fraud-signals:4:0"
       ],
@@ -355,15 +355,15 @@
         "routeRecallAtN": 1,
         "hitAtK": 1,
         "mrrAtK": 1,
-        "evidencePrecisionAtK": 0.6,
+        "evidencePrecisionAtK": 0.2,
         "evidenceRecall": 1,
-        "requiredEvidenceCoverage": 0.4
+        "requiredEvidenceCoverage": 0.2
       },
       "factuality": {
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 743,
+        "avgAnswerChars": 813,
         "meanKeywordCoverage": 0.8,
         "meanGroundingRatio": 1,
         "meanFactualScore": 0.9
@@ -387,7 +387,7 @@
       "firstRetrievedNodeIds": [
         "payments__03-settlement-reconciliation:2:0",
         "payments__03-settlement-reconciliation:4:0",
-        "payments__03-settlement-reconciliation:5:0",
+        "payments__01-ledger-posting:4:0",
         "risk__05-incident-response:4:0",
         "risk__05-incident-response:5:0"
       ],
@@ -396,7 +396,7 @@
         "routeRecallAtN": 1,
         "hitAtK": 1,
         "mrrAtK": 1,
-        "evidencePrecisionAtK": 0.6,
+        "evidencePrecisionAtK": 0.4,
         "evidenceRecall": 1,
         "requiredEvidenceCoverage": 0.6
       },
@@ -404,10 +404,10 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 739,
-        "meanKeywordCoverage": 0.4,
+        "avgAnswerChars": 1004,
+        "meanKeywordCoverage": 0.6,
         "meanGroundingRatio": 1,
-        "meanFactualScore": 0.7
+        "meanFactualScore": 0.8
       }
     },
     {
@@ -425,23 +425,23 @@
         "risk__02-fraud-signals"
       ],
       "firstRoute": [
-        "compliance",
         "payments",
+        "compliance",
         "risk"
       ],
       "firstRetrievedNodeIds": [
-        "compliance__02-aml-monitoring:4:0",
-        "compliance__03-sanctions-screening:5:0",
-        "compliance__01-kyc-policy:4:0",
         "payments__04-chargeback-lifecycle:1:0",
-        "payments__04-chargeback-lifecycle:4:0"
+        "payments__01-ledger-posting:4:0",
+        "payments__02-idempotency-keys:4:0",
+        "compliance__02-aml-monitoring:4:0",
+        "compliance__03-sanctions-screening:5:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
         "routeRecallAtN": 1,
         "hitAtK": 1,
-        "mrrAtK": 0.25,
-        "evidencePrecisionAtK": 0.4,
+        "mrrAtK": 1,
+        "evidencePrecisionAtK": 0.2,
         "evidenceRecall": 0.3333,
         "requiredEvidenceCoverage": 0.4
       },
@@ -449,7 +449,7 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 728,
+        "avgAnswerChars": 972,
         "meanKeywordCoverage": 0.4,
         "meanGroundingRatio": 1,
         "meanFactualScore": 0.7
@@ -467,12 +467,13 @@
       ],
       "firstRoute": [
         "risk",
-        "compliance"
+        "compliance",
+        "payments"
       ],
       "firstRetrievedNodeIds": [
         "risk__01-risk-score-model:4:0",
+        "risk__04-limit-management:4:0",
         "risk__01-risk-score-model:1:0",
-        "risk__01-risk-score-model:2:0",
         "compliance__01-kyc-policy:2:0",
         "compliance__02-aml-monitoring:5:0"
       ],
@@ -481,7 +482,7 @@
         "routeRecallAtN": 1,
         "hitAtK": 1,
         "mrrAtK": 1,
-        "evidencePrecisionAtK": 0.6,
+        "evidencePrecisionAtK": 0.4,
         "evidenceRecall": 1,
         "requiredEvidenceCoverage": 0.6667
       },
@@ -489,10 +490,10 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 771,
-        "meanKeywordCoverage": 0.8,
+        "avgAnswerChars": 1137,
+        "meanKeywordCoverage": 0.4,
         "meanGroundingRatio": 1,
-        "meanFactualScore": 0.9
+        "meanFactualScore": 0.7
       }
     },
     {
@@ -530,7 +531,7 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 594,
+        "avgAnswerChars": 664,
         "meanKeywordCoverage": 0.6,
         "meanGroundingRatio": 1,
         "meanFactualScore": 0.8
@@ -548,32 +549,33 @@
       ],
       "firstRoute": [
         "risk",
-        "payments"
+        "payments",
+        "compliance"
       ],
       "firstRetrievedNodeIds": [
         "risk__03-velocity-rules:4:0",
         "risk__03-velocity-rules:5:0",
-        "risk__03-velocity-rules:1:0",
+        "risk__04-limit-management:5:0",
         "payments__01-ledger-posting:2:0",
-        "payments__01-ledger-posting:4:0"
+        "payments__01-ledger-posting:5:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
         "routeRecallAtN": 1,
         "hitAtK": 1,
         "mrrAtK": 1,
-        "evidencePrecisionAtK": 0.6,
+        "evidencePrecisionAtK": 0.4,
         "evidenceRecall": 1,
-        "requiredEvidenceCoverage": 0.6667
+        "requiredEvidenceCoverage": 0.5
       },
       "factuality": {
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 724,
-        "meanKeywordCoverage": 0.4,
+        "avgAnswerChars": 963,
+        "meanKeywordCoverage": 0.2,
         "meanGroundingRatio": 1,
-        "meanFactualScore": 0.7
+        "meanFactualScore": 0.6
       }
     },
     {
@@ -589,33 +591,33 @@
       ],
       "firstRoute": [
         "risk",
-        "compliance",
-        "payments"
+        "payments",
+        "compliance"
       ],
       "firstRetrievedNodeIds": [
-        "risk__04-limit-management:4:0",
         "risk__04-limit-management:2:0",
-        "risk__04-limit-management:5:0",
-        "compliance__01-kyc-policy:2:0",
-        "compliance__02-aml-monitoring:4:0"
+        "risk__02-fraud-signals:5:0",
+        "risk__01-risk-score-model:4:0",
+        "payments__01-ledger-posting:4:0",
+        "payments__02-idempotency-keys:4:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
         "routeRecallAtN": 1,
         "hitAtK": 1,
         "mrrAtK": 1,
-        "evidencePrecisionAtK": 0.6,
+        "evidencePrecisionAtK": 0.2,
         "evidenceRecall": 0.5,
-        "requiredEvidenceCoverage": 0.4
+        "requiredEvidenceCoverage": 0.6
       },
       "factuality": {
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 761,
-        "meanKeywordCoverage": 0.6,
+        "avgAnswerChars": 990,
+        "meanKeywordCoverage": 0.8,
         "meanGroundingRatio": 1,
-        "meanFactualScore": 0.8
+        "meanFactualScore": 0.9
       }
     }
   ],

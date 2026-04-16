@@ -39,6 +39,12 @@ async function testIngestAutoAndStats(): Promise<void> {
     assert.ok(stats.sections >= 1)
     assert.ok(stats.chunks >= 1)
     assert.ok(stats.keywords >= 1)
+
+    const collection = engine.getCollection(collectionId)
+    const embeddedChunk = collection
+      ? Array.from(collection.getAllNodes().values()).find((node) => node.depth === 2 && (node.embedding?.length || 0) > 0)
+      : undefined
+    assert.ok(embeddedChunk, `Hybrid retrieval embeddings missing for collection: ${collectionId}`)
   }
 
   const routingReport = engine.getRoutingReport()
@@ -174,6 +180,12 @@ async function testSnapshotRoundtripAndReplaceLoad(): Promise<void> {
         sourceEngine.getCollectionStats(collectionId),
         restoredEngine.getCollectionStats(collectionId)
       )
+
+      const restoredCollection = restoredEngine.getCollection(collectionId)
+      const embeddedChunk = restoredCollection
+        ? Array.from(restoredCollection.getAllNodes().values()).find((node) => node.depth === 2 && (node.embedding?.length || 0) > 0)
+        : undefined
+      assert.ok(embeddedChunk, `Snapshot restore lost chunk embeddings for collection: ${collectionId}`)
     }
 
     const routeA = await sourceEngine.routeCollections('memory engine retrieval', { topCollections: 3 })

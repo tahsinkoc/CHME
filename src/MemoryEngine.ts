@@ -5,10 +5,10 @@ import { promisify } from 'node:util'
 import { Collection, Node } from './Collection'
 import { ingest as ingestCollection, ingestFiles } from './ingest'
 import { query } from './query'
-import { generateAnswer } from './generateAnswer'
 import { callLLM, LLMProvider } from './callLLM'
 import { fitTextBlocksToLimit, tokenizeSearchText } from './text'
 import { synthesizeAnswer } from './synthesizeAnswer'
+import { cosineSimilarity, embedTexts, resolveEmbeddingModel } from './embedding'
 
 const gzip = promisify(gzipCallback)
 const gunzip = promisify(gunzipCallback)
@@ -24,6 +24,12 @@ type MemoryEngineOptions = {
   openAIBaseUrl?: string
   openAIApiKey?: string
   snapshotDir?: string
+  embeddingModel?: string
+  localEmbeddingUrl?: string
+  embeddingDimensions?: number
+  embeddingTimeoutMs?: number
+  lexicalWeight?: number
+  semanticWeight?: number
 }
 
 export type RoutingRule = {
@@ -115,6 +121,7 @@ type EngineSnapshotManifest = {
   lastSourceRootPath?: string
   defaultCollectionId: string
   minRouteScore: number
+  embeddingSignature?: string
   routingRules: RoutingRuleSnapshot[]
   collections: string[]
   sourceFiles: SnapshotFileMeta[]
@@ -127,6 +134,11 @@ const DEFAULT_SNAPSHOT_DIR = './snapshots'
 const DEFAULT_TOP_COLLECTIONS = 3
 const DEFAULT_TOP_K_PER_COLLECTION = 3
 const DEFAULT_MIN_ROUTE_SCORE = 1
+const DEFAULT_EMBEDDING_DIMENSIONS = 192
+const DEFAULT_EMBEDDING_TIMEOUT_MS = 30000
+const DEFAULT_LEXICAL_WEIGHT = 0.82
+const DEFAULT_SEMANTIC_WEIGHT = 0.18
+const DEFAULT_RETRIEVAL_CANDIDATE_MULTIPLIER = 6
 
 export class MemoryEngine {
   private collections: Map<string, Collection>
@@ -139,6 +151,12 @@ export class MemoryEngine {
   private localUrl?: string
   private openAIBaseUrl?: string
   private openAIApiKey?: string
+  private embeddingModel?: string
+  private localEmbeddingUrl?: string
+  private embeddingDimensions: number
+  private embeddingTimeoutMs: number
+  private lexicalWeight: number
+  private semanticWeight: number
   private routingRules: RoutingRule[]
   private routingReport: RoutingReport
   private minRouteScore: number
@@ -147,6 +165,7 @@ export class MemoryEngine {
   private lastSourceFiles: SnapshotFileMeta[]
   private collectionToFiles: Map<string, string[]>
   private snapshotDir?: string
+  private embeddingCache: Map<string, number[]>
 
   constructor(options: MemoryEngineOptions = {}) {
     this.collections = new Map()
@@ -159,6 +178,12 @@ export class MemoryEngine {
     this.localUrl = options.localUrl
     this.openAIBaseUrl = options.openAIBaseUrl
     this.openAIApiKey = options.openAIApiKey
+    this.embeddingModel = options.embeddingModel
+    this.localEmbeddingUrl = options.localEmbeddingUrl
+    this.embeddingDimensions = options.embeddingDimensions ?? DEFAULT_EMBEDDING_DIMENSIONS
+    this.embeddingTimeoutMs = options.embeddingTimeoutMs ?? DEFAULT_EMBEDDING_TIMEOUT_MS
+    this.lexicalWeight = options.lexicalWeight ?? DEFAULT_LEXICAL_WEIGHT
+    this.semanticWeight = options.semanticWeight ?? DEFAULT_SEMANTIC_WEIGHT
     this.routingRules = []
     this.routingReport = { lastIngestAssignments: [] }
     this.minRouteScore = DEFAULT_MIN_ROUTE_SCORE
@@ -167,6 +192,7 @@ export class MemoryEngine {
     this.lastSourceFiles = []
     this.collectionToFiles = new Map()
     this.snapshotDir = undefined
+    this.embeddingCache = new Map()
 
     if (options.model !== undefined) {
       this.setModel(options.model)
@@ -339,6 +365,7 @@ export class MemoryEngine {
       }
       const fileList = grouped.get(collectionId) || []
       await ingestFiles(fileList, absoluteRoot, collection)
+      await this.hydrateCollectionEmbeddings(collection)
     }
 
     this.sortSourceMetadata()
@@ -360,9 +387,10 @@ export class MemoryEngine {
     }
 
     const queryTokens = tokenizeSearchText(question)
+    const questionEmbedding = await this.embedQuery(question)
 
-    const scored = Array.from(this.collections.entries())
-      .map(([collectionId, collection]) => {
+    const scored = await Promise.all(Array.from(this.collections.entries())
+      .map(async ([collectionId, collection]) => {
         let score = 0
         const keywordIndex = collection.getKeywordIndex()
         for (const token of queryTokens) {
@@ -370,14 +398,23 @@ export class MemoryEngine {
             score += 1
           }
         }
-        return { collectionId, score }
-      })
-      .sort((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score
+        await this.hydrateCollectionEmbeddings(collection)
+        const semanticScore = this.normalizeSemanticScore(
+          cosineSimilarity(questionEmbedding, this.computeCollectionCentroid(collection))
+        )
+        return {
+          collectionId,
+          score: score + (semanticScore * 3),
+          lexicalScore: score,
+          semanticScore
         }
-        return a.collectionId.localeCompare(b.collectionId)
-      })
+      }))
+    scored.sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score
+      }
+      return a.collectionId.localeCompare(b.collectionId)
+    })
 
     const filtered = scored.filter((item) => item.score >= this.minRouteScore)
     const source = filtered.length > 0 ? filtered : scored
@@ -408,7 +445,7 @@ export class MemoryEngine {
     if (!collection) {
       throw new Error(`Collection not found: ${collectionId}`)
     }
-    return await query(collection, question, topK)
+    return await this.retrieveHybrid(collection, question, topK)
   }
 
   async buildPrompt(
@@ -421,7 +458,9 @@ export class MemoryEngine {
     if (!collection) {
       throw new Error(`Collection not found: ${collectionId}`)
     }
-    return await generateAnswer(collection, question, topK, maxContextChars)
+    const chunks = await this.retrieve(collectionId, question, topK)
+    const context = this.buildCollectionContext(collection, chunks, maxContextChars)
+    return this.composePrompt(context, question)
   }
 
   async saveSnapshots(snapshotDir?: string): Promise<SnapshotSaveReport> {
@@ -446,6 +485,7 @@ export class MemoryEngine {
       lastSourceRootPath: this.lastSourceRootPath,
       defaultCollectionId: this.lastDefaultCollectionId,
       minRouteScore: this.minRouteScore,
+      embeddingSignature: this.getEmbeddingSignature(),
       routingRules: this.routingRules.map((rule) => ({
         pattern: rule.pattern.source,
         flags: rule.pattern.flags,
@@ -489,6 +529,7 @@ export class MemoryEngine {
     this.lastSourceFiles = (manifest.sourceFiles || []).map((item) => ({ ...item }))
     this.collectionToFiles = this.buildCollectionToFiles(this.lastSourceFiles)
     this.sortSourceMetadata()
+    const shouldRefreshEmbeddings = (manifest.embeddingSignature || '') !== this.getEmbeddingSignature()
 
     let collectionsLoaded = 0
     for (const collectionId of manifest.collections || []) {
@@ -496,6 +537,12 @@ export class MemoryEngine {
       const snapshot = await this.readGzipJson<CollectionSnapshot>(snapshotPath)
       this.restoreCollection(snapshot)
       collectionsLoaded += 1
+    }
+
+    if (shouldRefreshEmbeddings) {
+      for (const collection of this.collections.values()) {
+        this.clearCollectionEmbeddings(collection)
+      }
     }
 
     let filesChecked = 0
@@ -550,6 +597,7 @@ export class MemoryEngine {
         const filesForCollection = currentGrouped.get(collectionId) || []
         if (filesForCollection.length > 0) {
           await ingestFiles(filesForCollection, sourceRootPath, replacement)
+          await this.hydrateCollectionEmbeddings(replacement)
         }
       }
 
@@ -586,6 +634,12 @@ export class MemoryEngine {
         collectionId: item.collectionId,
         reason: 'snapshot'
       }))
+    }
+
+    if (shouldRefreshEmbeddings) {
+      for (const collection of this.collections.values()) {
+        await this.hydrateCollectionEmbeddings(collection)
+      }
     }
 
     return {
@@ -632,6 +686,7 @@ export class MemoryEngine {
 
   setProvider(provider: LLMProvider): void {
     this.provider = provider
+    this.embeddingCache.clear()
   }
 
   setLocalUrl(url: string): void {
@@ -639,6 +694,7 @@ export class MemoryEngine {
       throw new Error('localUrl must be a non-empty string')
     }
     this.localUrl = url
+    this.embeddingCache.clear()
   }
 
   setOpenAIBaseUrl(url: string): void {
@@ -646,6 +702,7 @@ export class MemoryEngine {
       throw new Error('openAIBaseUrl must be a non-empty string')
     }
     this.openAIBaseUrl = url
+    this.embeddingCache.clear()
   }
 
   setOpenAIApiKey(apiKey: string): void {
@@ -653,6 +710,23 @@ export class MemoryEngine {
       throw new Error('openAIApiKey must be a non-empty string')
     }
     this.openAIApiKey = apiKey
+    this.embeddingCache.clear()
+  }
+
+  setEmbeddingModel(model: string): void {
+    if (!model || model.trim().length === 0) {
+      throw new Error('embeddingModel must be a non-empty string')
+    }
+    this.embeddingModel = model
+    this.embeddingCache.clear()
+  }
+
+  setLocalEmbeddingUrl(url: string): void {
+    if (!url || url.trim().length === 0) {
+      throw new Error('localEmbeddingUrl must be a non-empty string')
+    }
+    this.localEmbeddingUrl = url
+    this.embeddingCache.clear()
   }
 
   setSnapshotDir(dir: string): void {
@@ -734,9 +808,7 @@ export class MemoryEngine {
 
       const chunks = await this.retrieve(collectionId, question, topKPerCollection)
       for (const chunk of chunks) {
-        const sectionTitle = this.resolveSectionTitle(collection, chunk)
-        const heading = sectionTitle ? `## ${sectionTitle}` : '## Section'
-        blocks.push(`### Collection: ${collectionId}\n${heading}\n${chunk.text}`)
+        blocks.push(this.formatContextBlock(collection, chunk, collectionId))
       }
     }
 
@@ -756,6 +828,289 @@ export class MemoryEngine {
       '',
       'Answer:'
     ].join('\n')
+  }
+
+  private buildCollectionContext(collection: Collection, chunks: Node[], maxContextChars: number): string {
+    const blocks = chunks.map((chunk) => this.formatContextBlock(collection, chunk))
+    return fitTextBlocksToLimit(blocks, maxContextChars)
+  }
+
+  private formatContextBlock(collection: Collection, chunk: Node, collectionId?: string): string {
+    const sectionTitle = this.resolveSectionTitle(collection, chunk)
+    const heading = sectionTitle ? `## ${sectionTitle}` : '## Section'
+    return collectionId
+      ? `### Collection: ${collectionId}\n${heading}\n${chunk.text}`
+      : `${heading}\n${chunk.text}`
+  }
+
+  private async retrieveHybrid(collection: Collection, question: string, topK: number): Promise<Node[]> {
+    if (topK <= 0) {
+      return []
+    }
+
+    const chunks = this.getChunkNodes(collection)
+    if (chunks.length === 0) {
+      return []
+    }
+
+    await this.hydrateCollectionEmbeddings(collection)
+
+    const candidateLimit = Math.min(
+      chunks.length,
+      Math.max(topK * DEFAULT_RETRIEVAL_CANDIDATE_MULTIPLIER, topK)
+    )
+    const lexicalNodes = await query(collection, question, candidateLimit)
+    const questionEmbedding = await this.embedQuery(question)
+
+    if (questionEmbedding.length === 0) {
+      return lexicalNodes.slice(0, topK)
+    }
+
+    const lexicalScores = new Map<string, number>()
+    const docLexicalSupport = new Map<string, number>()
+    for (let index = 0; index < lexicalNodes.length; index++) {
+      const node = lexicalNodes[index]
+      const lexicalScore = (lexicalNodes.length - index) / lexicalNodes.length
+      lexicalScores.set(node.id, lexicalScore)
+      const currentSupport = docLexicalSupport.get(node.docId) || 0
+      docLexicalSupport.set(node.docId, Math.max(currentSupport, lexicalScore))
+    }
+
+    const semanticScored = chunks
+      .map((node) => ({
+        node,
+        score: this.normalizeSemanticScore(cosineSimilarity(questionEmbedding, node.embedding))
+      }))
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score
+        }
+        return a.node.id.localeCompare(b.node.id)
+      })
+
+    const candidateMap = new Map<string, { node: Node; lexicalScore: number; semanticScore: number }>()
+
+    for (const node of lexicalNodes) {
+      candidateMap.set(node.id, {
+        node,
+        lexicalScore: lexicalScores.get(node.id) || 0,
+        semanticScore: 0
+      })
+    }
+
+    for (const item of semanticScored.slice(0, candidateLimit)) {
+      const existing = candidateMap.get(item.node.id)
+      if (existing) {
+        existing.semanticScore = item.score
+      } else {
+        candidateMap.set(item.node.id, {
+          node: item.node,
+          lexicalScore: 0,
+          semanticScore: item.score
+        })
+      }
+    }
+
+    const combined = Array.from(candidateMap.values())
+      .map((item) => {
+        const overlapBoost = item.lexicalScore > 0 && item.semanticScore > 0 ? 0.05 : 0
+        const docSupportBoost = (docLexicalSupport.get(item.node.docId) || 0) * 0.12
+        return {
+          node: item.node,
+          score: (item.lexicalScore * this.lexicalWeight) + (item.semanticScore * this.semanticWeight) + overlapBoost + docSupportBoost
+        }
+      })
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score
+        }
+        return a.node.id.localeCompare(b.node.id)
+      })
+
+    if (combined.length === 0 || combined.every((item) => item.score <= 0)) {
+      return lexicalNodes.slice(0, topK)
+    }
+
+    return this.selectDiverseScoredNodes(combined, topK)
+  }
+
+  private selectDiverseScoredNodes(scored: Array<{ node: Node; score: number }>, topK: number): Node[] {
+    const selected: Node[] = []
+    const pool = scored.map((item) => ({ ...item }))
+    const docCounts = new Map<string, number>()
+    const sectionCounts = new Map<string, number>()
+    const docBaseScores = new Map<string, number>()
+
+    for (const item of scored) {
+      const current = docBaseScores.get(item.node.docId) || Number.NEGATIVE_INFINITY
+      if (item.score > current) {
+        docBaseScores.set(item.node.docId, item.score)
+      }
+    }
+
+    while (selected.length < topK && pool.length > 0) {
+      let bestIndex = 0
+      let bestScore = Number.NEGATIVE_INFINITY
+
+      for (let index = 0; index < pool.length; index++) {
+        const item = pool[index]
+        const docBoost = (docBaseScores.get(item.node.docId) || 0) * 0.25
+        const docPenalty = (docCounts.get(item.node.docId) || 0) * 0.75
+        const sectionPenalty = (sectionCounts.get(item.node.parent || '') || 0) * 1
+        const adjustedScore = item.score + docBoost - docPenalty - sectionPenalty
+
+        if (adjustedScore > bestScore) {
+          bestScore = adjustedScore
+          bestIndex = index
+          continue
+        }
+
+        if (adjustedScore === bestScore && item.node.id.localeCompare(pool[bestIndex].node.id) < 0) {
+          bestIndex = index
+        }
+      }
+
+      const [chosen] = pool.splice(bestIndex, 1)
+      if (!chosen) {
+        break
+      }
+      if (chosen.score <= 0 && selected.length > 0) {
+        break
+      }
+
+      selected.push(chosen.node)
+      docCounts.set(chosen.node.docId, (docCounts.get(chosen.node.docId) || 0) + 1)
+      sectionCounts.set(chosen.node.parent || '', (sectionCounts.get(chosen.node.parent || '') || 0) + 1)
+    }
+
+    return selected
+  }
+
+  private async hydrateCollectionEmbeddings(collection: Collection): Promise<void> {
+    const chunkNodes = this.getChunkNodes(collection)
+    const missing = chunkNodes.filter((node) => !node.embedding || node.embedding.length === 0)
+    if (missing.length === 0) {
+      return
+    }
+
+    const vectors = await this.embedTextsCached(missing.map((node) => node.text))
+    for (let index = 0; index < missing.length; index++) {
+      missing[index].embedding = vectors[index] ? [...vectors[index]] : undefined
+    }
+  }
+
+  private clearCollectionEmbeddings(collection: Collection): void {
+    for (const node of this.getChunkNodes(collection)) {
+      node.embedding = undefined
+    }
+  }
+
+  private getChunkNodes(collection: Collection): Node[] {
+    return Array.from(collection.getAllNodes().values())
+      .filter((node) => node.depth === 2)
+      .sort((a, b) => a.id.localeCompare(b.id))
+  }
+
+  private computeCollectionCentroid(collection: Collection): number[] {
+    const vectors = this.getChunkNodes(collection)
+      .map((node) => node.embedding || [])
+      .filter((embedding) => embedding.length > 0)
+
+    if (vectors.length === 0) {
+      return []
+    }
+
+    const dimension = vectors[0].length
+    const centroid = new Array<number>(dimension).fill(0)
+
+    for (const vector of vectors) {
+      for (let index = 0; index < dimension; index++) {
+        centroid[index] += vector[index]
+      }
+    }
+
+    let norm = 0
+    for (let index = 0; index < dimension; index++) {
+      centroid[index] /= vectors.length
+      norm += centroid[index] * centroid[index]
+    }
+
+    if (norm === 0) {
+      return centroid
+    }
+
+    const scale = 1 / Math.sqrt(norm)
+    return centroid.map((value) => value * scale)
+  }
+
+  private async embedQuery(question: string): Promise<number[]> {
+    const [embedding] = await this.embedTextsCached([question])
+    return embedding || []
+  }
+
+  private async embedTextsCached(texts: string[]): Promise<number[][]> {
+    const results: number[][] = new Array(texts.length)
+    const missingTexts: string[] = []
+    const missingIndices: number[] = []
+
+    for (let index = 0; index < texts.length; index++) {
+      const text = texts[index]
+      const cacheKey = `${this.getEmbeddingSignature()}::${text}`
+      const cached = this.embeddingCache.get(cacheKey)
+      if (cached) {
+        results[index] = [...cached]
+      } else {
+        missingTexts.push(text)
+        missingIndices.push(index)
+      }
+    }
+
+    if (missingTexts.length > 0) {
+      const generated = await embedTexts(missingTexts, this.getEmbeddingOptions())
+      for (let index = 0; index < generated.length; index++) {
+        const vector = generated[index] ? [...generated[index]] : []
+        const originalIndex = missingIndices[index]
+        const cacheKey = `${this.getEmbeddingSignature()}::${texts[originalIndex]}`
+        this.embeddingCache.set(cacheKey, vector)
+        results[originalIndex] = [...vector]
+      }
+    }
+
+    return results.map((vector) => vector || [])
+  }
+
+  private getEmbeddingOptions(): Parameters<typeof embedTexts>[1] {
+    const openAIApiKey = this.openAIApiKey ?? process.env.OPENAI_API_KEY ?? process.env.MISTRAL_API_KEY
+    const resolvedEmbeddingModel = this.provider === 'openai'
+      ? (openAIApiKey ? resolveEmbeddingModel('openai', this.embeddingModel, this.openAIBaseUrl) : undefined)
+      : (this.embeddingModel && (this.localEmbeddingUrl || this.localUrl) ? this.embeddingModel : undefined)
+
+    return {
+      provider: this.provider,
+      embeddingModel: resolvedEmbeddingModel,
+      dimensions: this.embeddingDimensions,
+      timeoutMs: this.embeddingTimeoutMs,
+      localUrl: this.localUrl,
+      localEmbeddingUrl: this.localEmbeddingUrl,
+      openAIBaseUrl: this.openAIBaseUrl,
+      openAIApiKey
+    }
+  }
+
+  private getEmbeddingSignature(): string {
+    const options = this.getEmbeddingOptions()
+    return [
+      options.provider || 'local',
+      options.embeddingModel || 'deterministic',
+      options.dimensions || DEFAULT_EMBEDDING_DIMENSIONS
+    ].join(':')
+  }
+
+  private normalizeSemanticScore(value: number): number {
+    if (!Number.isFinite(value) || value <= 0) {
+      return 0
+    }
+    return value
   }
 
   private async retrieveAcrossCollections(
