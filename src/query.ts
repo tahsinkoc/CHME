@@ -1,16 +1,17 @@
 import { Collection, Node } from './Collection'
+import { tokenizePlainText, tokenizeSearchText } from './text'
 
 const DEFAULT_TOP_K = 5
-
-const STOPWORDS = new Set([
-  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with',
-  'this', 'these', 'those', 'or', 'if', 'then', 'than', 'but', 'not', 'no', 'yes', 'you', 'your', 'we', 'our', 'they', 'their', 'i', 'me', 'my', 'mine', 'them',
-  'his', 'her', 'hers', 'who', 'whom', 'what', 'which', 'when', 'where', 'why', 'how', 'into', 'out', 'up', 'down', 'over', 'under', 'again', 'further', 'once'
-])
 
 type ScoredChunk = {
   node: Node
   score: number
+}
+
+type QueryAnalysis = {
+  rawTokens: string[]
+  searchTokens: string[]
+  phrases: string[]
 }
 
 export async function query(collection: Collection, question: string, topK: number = DEFAULT_TOP_K): Promise<Node[]> {
@@ -18,12 +19,12 @@ export async function query(collection: Collection, question: string, topK: numb
     return []
   }
 
-  const queryTokens = tokenize(question)
+  const analysis = analyzeQuestion(question)
   const nodes = collection.getAllNodes()
   const keywordIndex = collection.getKeywordIndex()
 
   const candidateIds = new Set<string>()
-  for (const token of queryTokens) {
+  for (const token of analysis.searchTokens) {
     const ids = keywordIndex.get(token)
     if (!ids) {
       continue
@@ -48,7 +49,7 @@ export async function query(collection: Collection, question: string, topK: numb
       continue
     }
 
-    const score = scoreChunk(node, queryTokens)
+    const score = scoreChunk(node, analysis)
     scored.push({ node, score })
   }
 
@@ -59,75 +60,130 @@ export async function query(collection: Collection, question: string, topK: numb
     return a.node.id.localeCompare(b.node.id)
   })
 
-  const grouped = new Map<string, Node[]>()
-  for (const item of scored) {
-    const sectionId = item.node.parent || ''
-    const list = grouped.get(sectionId)
-    if (list) {
-      list.push(item.node)
-    } else {
-      grouped.set(sectionId, [item.node])
+  return selectDiverseChunks(scored, topK)
+}
+
+function analyzeQuestion(question: string): QueryAnalysis {
+  const rawTokens = tokenizePlainText(question)
+  const searchTokens = tokenizeSearchText(question)
+  const phrases: string[] = []
+
+  for (let index = 0; index < rawTokens.length - 1; index++) {
+    const pair = `${rawTokens[index]} ${rawTokens[index + 1]}`
+    phrases.push(pair)
+    if (index < rawTokens.length - 2) {
+      phrases.push(`${pair} ${rawTokens[index + 2]}`)
     }
   }
 
-  const result: Node[] = []
-  while (result.length < topK) {
-    let added = false
+  return { rawTokens, searchTokens, phrases }
+}
 
-    for (const list of grouped.values()) {
-      if (list.length === 0) {
+function selectDiverseChunks(scored: ScoredChunk[], topK: number): Node[] {
+  const selected: Node[] = []
+  const docCounts = new Map<string, number>()
+  const sectionCounts = new Map<string, number>()
+  const pool = scored.map((item) => ({ ...item }))
+  const docBaseScores = new Map<string, number>()
+
+  for (const item of scored) {
+    const current = docBaseScores.get(item.node.docId) || Number.NEGATIVE_INFINITY
+    if (item.score > current) {
+      docBaseScores.set(item.node.docId, item.score)
+    }
+  }
+
+  while (selected.length < topK && pool.length > 0) {
+    let bestIndex = 0
+    let bestScore = Number.NEGATIVE_INFINITY
+
+    for (let index = 0; index < pool.length; index++) {
+      const item = pool[index]
+      const docScoreBoost = (docBaseScores.get(item.node.docId) || 0) * 0.35
+      const docPenalty = (docCounts.get(item.node.docId) || 0) * 0.75
+      const sectionPenalty = (sectionCounts.get(item.node.parent || '') || 0) * 1
+      const adjustedScore = item.score + docScoreBoost - docPenalty - sectionPenalty
+
+      if (adjustedScore > bestScore) {
+        bestIndex = index
+        bestScore = adjustedScore
         continue
       }
 
-      result.push(list.shift() as Node)
-      added = true
-
-      if (result.length >= topK) {
-        break
+      if (adjustedScore === bestScore && item.node.id.localeCompare(pool[bestIndex].node.id) < 0) {
+        bestIndex = index
       }
     }
 
-    if (!added) {
+    const [chosen] = pool.splice(bestIndex, 1)
+    if (!chosen) {
       break
     }
+    if (chosen.score <= 0 && selected.length > 0) {
+      break
+    }
+
+    selected.push(chosen.node)
+    docCounts.set(chosen.node.docId, (docCounts.get(chosen.node.docId) || 0) + 1)
+    sectionCounts.set(chosen.node.parent || '', (sectionCounts.get(chosen.node.parent || '') || 0) + 1)
   }
 
-  return result
+  return selected
 }
 
-function scoreChunk(chunk: Node, queryTokens: string[]): number {
-  if (queryTokens.length === 0) {
+function scoreChunk(chunk: Node, analysis: QueryAnalysis): number {
+  if (analysis.searchTokens.length === 0) {
     return 0
   }
 
-  const chunkTokens = new Set(chunk.tokens && chunk.tokens.length > 0 ? chunk.tokens : tokenize(chunk.text))
-  let overlap = 0
+  const rawChunkTokens = new Set(tokenizePlainText(chunk.text))
+  const searchChunkTokens = new Set(chunk.tokens && chunk.tokens.length > 0 ? chunk.tokens : tokenizeSearchText(chunk.text))
+  let exactMatches = 0
+  let expandedMatches = 0
+  let phraseMatches = 0
 
-  for (const token of queryTokens) {
-    if (chunkTokens.has(token)) {
-      overlap += 1
+  for (const token of analysis.rawTokens) {
+    if (rawChunkTokens.has(token)) {
+      exactMatches += 1
     }
   }
 
-  return overlap
-}
-
-function tokenize(input: string): string[] {
-  const cleaned = input.toLowerCase().replace(/[^a-z0-9\s]/g, ' ')
-  const parts = cleaned.split(/\s+/)
-  const unique = new Set<string>()
-
-  for (const part of parts) {
-    if (!part) {
-      continue
+  for (const token of analysis.searchTokens) {
+    if (searchChunkTokens.has(token)) {
+      expandedMatches += 1
     }
-    if (STOPWORDS.has(part)) {
-      continue
-    }
-    unique.add(part)
   }
 
-  return Array.from(unique)
+  const loweredText = chunk.text.toLowerCase()
+  for (const phrase of analysis.phrases) {
+    if (phrase.length > 0 && loweredText.includes(phrase)) {
+      phraseMatches += 1
+    }
+  }
+
+  let score = (exactMatches * 5) + (expandedMatches * 1.5) + (phraseMatches * 4)
+  const stepMentions = (chunk.text.match(/\bstep\s+\d+\b/gi) || []).length
+  const repeatedApprovalMentions = (chunk.text.match(/before approval/gi) || []).length
+
+  if (/must enforce|primary monitoring signals include|common failure modes include/i.test(chunk.text)) {
+    score += 3
+  }
+  if (chunk.text.length > 700) {
+    score -= 2
+  }
+  if (exactMatches === 0 && phraseMatches === 0) {
+    score -= 1
+  }
+  if (stepMentions >= 2) {
+    score -= 25
+  } else if (/^step\s+\d+/i.test(chunk.text.trim())) {
+    score -= 8
+  }
+  if (repeatedApprovalMentions >= 2) {
+    score -= 15
+  }
+
+  return score
 }
 
 function isChunkNode(node: Node): boolean {

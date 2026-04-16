@@ -7,6 +7,8 @@ import { ingest as ingestCollection, ingestFiles } from './ingest'
 import { query } from './query'
 import { generateAnswer } from './generateAnswer'
 import { callLLM, LLMProvider } from './callLLM'
+import { fitTextBlocksToLimit, tokenizeSearchText } from './text'
+import { synthesizeAnswer } from './synthesizeAnswer'
 
 const gzip = promisify(gzipCallback)
 const gunzip = promisify(gunzipCallback)
@@ -125,12 +127,6 @@ const DEFAULT_SNAPSHOT_DIR = './snapshots'
 const DEFAULT_TOP_COLLECTIONS = 3
 const DEFAULT_TOP_K_PER_COLLECTION = 3
 const DEFAULT_MIN_ROUTE_SCORE = 1
-
-const STOPWORDS = new Set([
-  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with',
-  'this', 'these', 'those', 'or', 'if', 'then', 'than', 'but', 'not', 'no', 'yes', 'you', 'your', 'we', 'our', 'they', 'their', 'i', 'me', 'my', 'mine', 'them',
-  'his', 'her', 'hers', 'who', 'whom', 'what', 'which', 'when', 'where', 'why', 'how', 'into', 'out', 'up', 'down', 'over', 'under', 'again', 'further', 'once'
-])
 
 export class MemoryEngine {
   private collections: Map<string, Collection>
@@ -363,7 +359,7 @@ export class MemoryEngine {
       return []
     }
 
-    const queryTokens = this.tokenize(question)
+    const queryTokens = tokenizeSearchText(question)
 
     const scored = Array.from(this.collections.entries())
       .map(([collectionId, collection]) => {
@@ -396,6 +392,15 @@ export class MemoryEngine {
       return await this.askScoped(arg1, arg2)
     }
     return await this.askGlobal(arg1, arg2)
+  }
+
+  async askWithLLM(collectionId: string, question: string): Promise<string>
+  async askWithLLM(question: string, options?: AskGlobalOptions): Promise<string>
+  async askWithLLM(arg1: string, arg2?: string | AskGlobalOptions): Promise<string> {
+    if (typeof arg2 === 'string') {
+      return await this.askScopedWithLLM(arg1, arg2)
+    }
+    return await this.askGlobalWithLLM(arg1, arg2)
   }
 
   async retrieve(collectionId: string, question: string, topK: number = this.topK): Promise<Node[]> {
@@ -662,6 +667,11 @@ export class MemoryEngine {
   }
 
   private async askScoped(collectionId: string, question: string): Promise<string> {
+    const chunks = await this.retrieve(collectionId, question, this.topK)
+    return synthesizeAnswer(question, chunks, this.maxContextChars)
+  }
+
+  private async askScopedWithLLM(collectionId: string, question: string): Promise<string> {
     const prompt = await this.buildPrompt(collectionId, question)
     const maxTokens = this.resolveMaxTokens()
     return await callLLM(prompt, this.model, this.temperature, maxTokens, {
@@ -673,6 +683,21 @@ export class MemoryEngine {
   }
 
   private async askGlobal(question: string, options: AskGlobalOptions = {}): Promise<string> {
+    const topCollections = this.normalizePositiveInteger(options.topCollections, DEFAULT_TOP_COLLECTIONS)
+    const topKPerCollection = this.normalizePositiveInteger(options.topKPerCollection, DEFAULT_TOP_K_PER_COLLECTION)
+    const maxContextChars = options.maxContextChars ?? this.maxContextChars
+
+    const selectedCollections = await this.routeCollections(question, { topCollections })
+    if (selectedCollections.length === 0) {
+      throw new Error('No collections available for global ask')
+    }
+
+    const chunks = (await this.retrieveAcrossCollections(selectedCollections, question, topKPerCollection))
+      .slice(0, this.topK)
+    return synthesizeAnswer(question, chunks, maxContextChars)
+  }
+
+  private async askGlobalWithLLM(question: string, options: AskGlobalOptions = {}): Promise<string> {
     const topCollections = this.normalizePositiveInteger(options.topCollections, DEFAULT_TOP_COLLECTIONS)
     const topKPerCollection = this.normalizePositiveInteger(options.topKPerCollection, DEFAULT_TOP_K_PER_COLLECTION)
     const maxContextChars = options.maxContextChars ?? this.maxContextChars
@@ -715,7 +740,7 @@ export class MemoryEngine {
       }
     }
 
-    return this.fitBlocksToLimit(blocks, maxContextChars)
+    return fitTextBlocksToLimit(blocks, maxContextChars)
   }
 
   private composePrompt(context: string, question: string): string {
@@ -733,6 +758,28 @@ export class MemoryEngine {
     ].join('\n')
   }
 
+  private async retrieveAcrossCollections(
+    collectionIds: string[],
+    question: string,
+    topKPerCollection: number
+  ): Promise<Node[]> {
+    const combined: Node[] = []
+    const seen = new Set<string>()
+
+    for (const collectionId of collectionIds) {
+      const chunks = await this.retrieve(collectionId, question, topKPerCollection)
+      for (const chunk of chunks) {
+        if (seen.has(chunk.id)) {
+          continue
+        }
+        seen.add(chunk.id)
+        combined.push(chunk)
+      }
+    }
+
+    return combined
+  }
+
   private resolveSectionTitle(collection: Collection, chunk: Node): string {
     if (!chunk.parent) {
       return ''
@@ -744,90 +791,6 @@ export class MemoryEngine {
     }
 
     return sectionNode.text.trim()
-  }
-
-  private fitBlocksToLimit(blocks: string[], maxChars: number): string {
-    if (maxChars <= 0 || blocks.length === 0) {
-      return ''
-    }
-
-    const selected: string[] = []
-    let used = 0
-
-    for (const block of blocks) {
-      const separator = selected.length === 0 ? 0 : 2
-      const nextSize = used + separator + block.length
-      if (nextSize <= maxChars) {
-        if (separator > 0) {
-          used += separator
-        }
-        selected.push(block)
-        used += block.length
-        continue
-      }
-
-      if (selected.length === 0) {
-        const truncated = this.truncateBlockBySentence(block, maxChars)
-        if (truncated.length > 0) {
-          selected.push(truncated)
-        }
-      }
-      break
-    }
-
-    return selected.join('\n\n')
-  }
-
-  private truncateBlockBySentence(block: string, maxChars: number): string {
-    if (block.length <= maxChars) {
-      return block
-    }
-
-    const clipped = block.slice(0, maxChars)
-    const sentenceBreak = this.findLastSentenceBreak(clipped)
-    if (sentenceBreak > 0) {
-      return clipped.slice(0, sentenceBreak).trimEnd()
-    }
-
-    const newlineBreak = clipped.lastIndexOf('\n')
-    if (newlineBreak > 0) {
-      return clipped.slice(0, newlineBreak).trimEnd()
-    }
-
-    const wordBreak = clipped.lastIndexOf(' ')
-    if (wordBreak > 0) {
-      return clipped.slice(0, wordBreak).trimEnd()
-    }
-
-    return clipped.trimEnd()
-  }
-
-  private findLastSentenceBreak(text: string): number {
-    for (let i = text.length - 1; i >= 0; i--) {
-      const ch = text[i]
-      if (ch === '.' || ch === '!' || ch === '?') {
-        return i + 1
-      }
-    }
-    return -1
-  }
-
-  private tokenize(input: string): string[] {
-    const cleaned = input.toLowerCase().replace(/[^a-z0-9\s]/g, ' ')
-    const parts = cleaned.split(/\s+/)
-    const unique = new Set<string>()
-
-    for (const part of parts) {
-      if (!part) {
-        continue
-      }
-      if (STOPWORDS.has(part)) {
-        continue
-      }
-      unique.add(part)
-    }
-
-    return Array.from(unique)
   }
 
   private resolveMaxTokens(): number {

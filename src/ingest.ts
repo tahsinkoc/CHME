@@ -1,13 +1,10 @@
 import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { Collection, Node as MemoryNode } from './Collection'
+import { tokenizeSearchText } from './text'
 
 const MAX_CHUNK_CHARS = 800
 const CHUNK_OVERLAP_CHARS = 100
-
-const STOPWORDS = new Set([
-  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were', 'will', 'with', 'this', 'these', 'those', 'or', 'if', 'then', 'than', 'but', 'not', 'no', 'yes', 'you', 'your', 'we', 'our', 'they', 'their', 'i', 'me', 'my', 'mine', 'them', 'his', 'her', 'hers', 'who', 'whom', 'what', 'which', 'when', 'where', 'why', 'how', 'into', 'out', 'up', 'down', 'over', 'under', 'again', 'further', 'once'
-])
 
 type ParsedSection = {
   title: string
@@ -54,12 +51,13 @@ export async function ingestFiles(filePaths: string[], rootPath: string, collect
     const docId = createDocId(absoluteRoot, filePath)
     const content = await readFile(filePath, 'utf8')
     const sections = flattenSections(parseMarkdownToSections(content))
+    const documentTitle = resolveDocumentTitle(filePath, sections)
 
     collection.addDocument(docId, filePath)
 
     const rootNode: MemoryNode = {
       id: `${docId}:root`,
-      text: path.basename(filePath),
+      text: documentTitle,
       children: [],
       depth: 0,
       docId,
@@ -85,7 +83,7 @@ export async function ingestFiles(filePaths: string[], rootPath: string, collect
       for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
         const chunkTextValue = chunks[chunkIndex].text
         const chunkId = `${docId}:${sectionIndex}:${chunkIndex}`
-        const tokens = tokenizeChunk(chunkTextValue)
+        const tokens = tokenizeChunk([documentTitle, section.title, chunkTextValue].join('\n'))
 
         const chunkNode: MemoryNode = {
           id: chunkId,
@@ -249,24 +247,7 @@ function findChunkEnd(text: string, start: number, maxChars: number): number {
 }
 
 export function tokenizeChunk(chunkText: string): string[] {
-  const cleaned = chunkText
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-
-  const parts = cleaned.split(/\s+/)
-  const unique = new Set<string>()
-
-  for (const part of parts) {
-    if (!part) {
-      continue
-    }
-    if (STOPWORDS.has(part)) {
-      continue
-    }
-    unique.add(part)
-  }
-
-  return Array.from(unique)
+  return tokenizeSearchText(chunkText)
 }
 
 function extractSectionIndex(sectionId: string): number {
@@ -293,4 +274,13 @@ function flattenSections(sections: Section[]): ParsedSection[] {
   }
 
   return flat
+}
+
+function resolveDocumentTitle(filePath: string, sections: ParsedSection[]): string {
+  const firstTitledSection = sections.find((section) => section.title && section.title !== 'Untitled')
+  if (firstTitledSection) {
+    return firstTitledSection.title
+  }
+
+  return path.basename(filePath, path.extname(filePath))
 }

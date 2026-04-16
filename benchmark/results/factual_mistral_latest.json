@@ -1,8 +1,8 @@
 {
-  "runId": "2026-02-25T23-50-48-221Z",
-  "startedAt": "2026-02-25T23:50:48.221Z",
-  "finishedAt": "2026-02-25T23:51:35.862Z",
-  "durationMs": 47641,
+  "runId": "2026-04-16T13-30-51-559Z",
+  "startedAt": "2026-04-16T13:30:51.559Z",
+  "finishedAt": "2026-04-16T13:30:51.703Z",
+  "durationMs": 144,
   "config": {
     "iterations": 2,
     "liveLlmGrading": true,
@@ -40,21 +40,21 @@
         "sections": 30,
         "chunks": 50,
         "nodes": 85,
-        "keywords": 206
+        "keywords": 356
       },
       "payments": {
         "documents": 5,
         "sections": 30,
         "chunks": 50,
         "nodes": 85,
-        "keywords": 215
+        "keywords": 358
       },
       "risk": {
         "documents": 5,
         "sections": 30,
         "chunks": 50,
         "nodes": 85,
-        "keywords": 201
+        "keywords": 354
       }
     }
   },
@@ -70,9 +70,9 @@
       "filesChecked": 15
     },
     "timingMs": {
-      "ingest": 19.79,
-      "save": 13.08,
-      "load": 7.95
+      "ingest": 21.25,
+      "save": 13.78,
+      "load": 9.4
     },
     "roundtrip": {
       "pass": true,
@@ -82,42 +82,42 @@
   "relevance": {
     "routeTop1Accuracy": 1,
     "routeRecallAtN": 1,
-    "hitAtK": 0.9167,
-    "mrrAtK": 0.7986,
-    "evidencePrecisionAtK": 0.4,
-    "evidenceRecall": 0.8194
+    "hitAtK": 1,
+    "mrrAtK": 0.8403,
+    "evidencePrecisionAtK": 0.5,
+    "evidenceRecall": 0.8611
   },
   "factuality": {
     "enabled": true,
-    "meanFactualScore": 0.5943,
-    "meanKeywordCoverage": 0.75,
-    "meanGroundingRatio": 0.4385,
+    "meanFactualScore": 0.8167,
+    "meanKeywordCoverage": 0.6333,
+    "meanGroundingRatio": 1,
     "emptyAnswers": 0
   },
   "latency": {
     "routeMs": {
       "count": 24,
-      "mean": 0.05,
+      "mean": 0.04,
       "p50": 0.03,
-      "p95": 0.07,
-      "min": 0.03,
-      "max": 0.22
+      "p95": 0.05,
+      "min": 0.01,
+      "max": 0.23
     },
     "retrieveMs": {
       "count": 24,
-      "mean": 0.23,
-      "p50": 0.23,
-      "p95": 0.53,
-      "min": 0.03,
-      "max": 0.7
+      "mean": 1.5,
+      "p50": 1.75,
+      "p95": 2.13,
+      "min": 0.3,
+      "max": 3.46
     },
     "askMs": {
       "count": 24,
-      "mean": 1982.39,
-      "p50": 1898.86,
-      "p95": 3168.77,
-      "min": 915.58,
-      "max": 3227.56
+      "mean": 1.8,
+      "p50": 1.88,
+      "p95": 3.27,
+      "min": 0.52,
+      "max": 3.87
     }
   },
   "queries": [
@@ -138,10 +138,10 @@
       ],
       "firstRetrievedNodeIds": [
         "compliance__01-kyc-policy:2:0",
-        "compliance__01-kyc-policy:1:0",
         "compliance__01-kyc-policy:5:0",
-        "payments__01-ledger-posting:1:0",
-        "payments__01-ledger-posting:3:0"
+        "compliance__01-kyc-policy:1:0",
+        "payments__05-fx-pricing-and-fees:4:0",
+        "payments__01-ledger-posting:4:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
@@ -156,10 +156,10 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 727,
+        "avgAnswerChars": 1012,
         "meanKeywordCoverage": 1,
-        "meanGroundingRatio": 0.5152,
-        "meanFactualScore": 0.7576
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 1
       }
     },
     {
@@ -179,8 +179,8 @@
       ],
       "firstRetrievedNodeIds": [
         "compliance__02-aml-monitoring:4:0",
+        "compliance__02-aml-monitoring:2:0",
         "compliance__01-kyc-policy:4:0",
-        "compliance__02-aml-monitoring:3:0",
         "payments__05-fx-pricing-and-fees:4:0",
         "payments__01-ledger-posting:4:0"
       ],
@@ -191,16 +191,16 @@
         "mrrAtK": 1,
         "evidencePrecisionAtK": 0.4,
         "evidenceRecall": 1,
-        "requiredEvidenceCoverage": 0.4
+        "requiredEvidenceCoverage": 0.6
       },
       "factuality": {
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 2164.5,
-        "meanKeywordCoverage": 0.4,
-        "meanGroundingRatio": 0.2928,
-        "meanFactualScore": 0.3464
+        "avgAnswerChars": 615,
+        "meanKeywordCoverage": 0.8,
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 0.9
       }
     },
     {
@@ -220,17 +220,17 @@
       ],
       "firstRetrievedNodeIds": [
         "compliance__03-sanctions-screening:5:0",
-        "compliance__05-regulatory-reporting:3:0",
-        "compliance__01-kyc-policy:2:0",
-        "payments__01-ledger-posting:3:0",
-        "payments__01-ledger-posting:5:0"
+        "compliance__03-sanctions-screening:2:0",
+        "compliance__03-sanctions-screening:4:0",
+        "payments__01-ledger-posting:5:0",
+        "payments__02-idempotency-keys:5:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
         "routeRecallAtN": 1,
         "hitAtK": 1,
         "mrrAtK": 1,
-        "evidencePrecisionAtK": 0.2,
+        "evidencePrecisionAtK": 0.6,
         "evidenceRecall": 1,
         "requiredEvidenceCoverage": 0.25
       },
@@ -238,10 +238,10 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 1763,
+        "avgAnswerChars": 789,
         "meanKeywordCoverage": 0.6,
-        "meanGroundingRatio": 0.6135,
-        "meanFactualScore": 0.6068
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 0.8
       }
     },
     {
@@ -258,15 +258,15 @@
       ],
       "firstRoute": [
         "compliance",
-        "payments",
-        "risk"
+        "risk",
+        "payments"
       ],
       "firstRetrievedNodeIds": [
-        "compliance__01-kyc-policy:3:0",
-        "compliance__02-aml-monitoring:3:0",
-        "compliance__03-sanctions-screening:3:0",
-        "payments__01-ledger-posting:3:0",
-        "payments__02-idempotency-keys:3:0"
+        "compliance__01-kyc-policy:4:0",
+        "compliance__01-kyc-policy:5:0",
+        "compliance__03-sanctions-screening:1:0",
+        "risk__04-limit-management:2:0",
+        "risk__04-limit-management:5:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
@@ -281,10 +281,10 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 1424.5,
-        "meanKeywordCoverage": 0.8,
-        "meanGroundingRatio": 0.2252,
-        "meanFactualScore": 0.5126
+        "avgAnswerChars": 728,
+        "meanKeywordCoverage": 0.2,
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 0.6
       }
     },
     {
@@ -299,15 +299,15 @@
       ],
       "firstRoute": [
         "payments",
-        "compliance",
-        "risk"
+        "risk",
+        "compliance"
       ],
       "firstRetrievedNodeIds": [
         "payments__01-ledger-posting:2:0",
-        "payments__01-ledger-posting:3:0",
         "payments__01-ledger-posting:1:0",
-        "compliance__02-aml-monitoring:2:0",
-        "compliance__01-kyc-policy:2:0"
+        "payments__01-ledger-posting:5:0",
+        "risk__03-velocity-rules:2:0",
+        "risk__01-risk-score-model:4:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
@@ -322,10 +322,10 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 1580.5,
+        "avgAnswerChars": 742,
         "meanKeywordCoverage": 1,
-        "meanGroundingRatio": 0.4637,
-        "meanFactualScore": 0.7318
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 1
       }
     },
     {
@@ -345,10 +345,10 @@
       ],
       "firstRetrievedNodeIds": [
         "payments__02-idempotency-keys:2:0",
-        "payments__02-idempotency-keys:3:0",
         "payments__02-idempotency-keys:4:0",
-        "risk__03-velocity-rules:3:0",
-        "risk__01-risk-score-model:3:0"
+        "payments__02-idempotency-keys:5:0",
+        "risk__01-risk-score-model:4:0",
+        "risk__02-fraud-signals:4:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
@@ -357,16 +357,16 @@
         "mrrAtK": 1,
         "evidencePrecisionAtK": 0.6,
         "evidenceRecall": 1,
-        "requiredEvidenceCoverage": 0.6
+        "requiredEvidenceCoverage": 0.4
       },
       "factuality": {
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 1457.5,
+        "avgAnswerChars": 743,
         "meanKeywordCoverage": 0.8,
-        "meanGroundingRatio": 0.4827,
-        "meanFactualScore": 0.6414
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 0.9
       }
     },
     {
@@ -385,9 +385,9 @@
         "compliance"
       ],
       "firstRetrievedNodeIds": [
-        "payments__03-settlement-reconciliation:1:0",
         "payments__03-settlement-reconciliation:2:0",
-        "payments__03-settlement-reconciliation:3:0",
+        "payments__03-settlement-reconciliation:4:0",
+        "payments__03-settlement-reconciliation:5:0",
         "risk__05-incident-response:4:0",
         "risk__05-incident-response:5:0"
       ],
@@ -404,10 +404,10 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 1473,
-        "meanKeywordCoverage": 0.8,
-        "meanGroundingRatio": 0.4233,
-        "meanFactualScore": 0.6116
+        "avgAnswerChars": 739,
+        "meanKeywordCoverage": 0.4,
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 0.7
       }
     },
     {
@@ -430,18 +430,18 @@
         "risk"
       ],
       "firstRetrievedNodeIds": [
-        "compliance__01-kyc-policy:3:0",
-        "compliance__02-aml-monitoring:3:0",
-        "compliance__03-sanctions-screening:3:0",
-        "payments__04-chargeback-lifecycle:3:0",
-        "payments__01-ledger-posting:3:0"
+        "compliance__02-aml-monitoring:4:0",
+        "compliance__03-sanctions-screening:5:0",
+        "compliance__01-kyc-policy:4:0",
+        "payments__04-chargeback-lifecycle:1:0",
+        "payments__04-chargeback-lifecycle:4:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
         "routeRecallAtN": 1,
         "hitAtK": 1,
         "mrrAtK": 0.25,
-        "evidencePrecisionAtK": 0.2,
+        "evidencePrecisionAtK": 0.4,
         "evidenceRecall": 0.3333,
         "requiredEvidenceCoverage": 0.4
       },
@@ -449,10 +449,10 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 1275,
-        "meanKeywordCoverage": 0.9,
-        "meanGroundingRatio": 0.2468,
-        "meanFactualScore": 0.5734
+        "avgAnswerChars": 728,
+        "meanKeywordCoverage": 0.4,
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 0.7
       }
     },
     {
@@ -470,9 +470,9 @@
         "compliance"
       ],
       "firstRetrievedNodeIds": [
-        "risk__01-risk-score-model:1:0",
-        "risk__01-risk-score-model:3:0",
         "risk__01-risk-score-model:4:0",
+        "risk__01-risk-score-model:1:0",
+        "risk__01-risk-score-model:2:0",
         "compliance__01-kyc-policy:2:0",
         "compliance__02-aml-monitoring:5:0"
       ],
@@ -489,10 +489,10 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 1791.5,
-        "meanKeywordCoverage": 0.6,
-        "meanGroundingRatio": 0.4797,
-        "meanFactualScore": 0.5399
+        "avgAnswerChars": 771,
+        "meanKeywordCoverage": 0.8,
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 0.9
       }
     },
     {
@@ -511,17 +511,17 @@
         "compliance"
       ],
       "firstRetrievedNodeIds": [
-        "risk__02-fraud-signals:3:0",
         "risk__05-incident-response:4:0",
-        "risk__01-risk-score-model:3:0",
-        "payments__01-ledger-posting:3:0",
-        "payments__01-ledger-posting:4:0"
+        "risk__02-fraud-signals:4:0",
+        "risk__01-risk-score-model:4:0",
+        "payments__01-ledger-posting:4:0",
+        "payments__02-idempotency-keys:4:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
         "routeRecallAtN": 1,
         "hitAtK": 1,
-        "mrrAtK": 1,
+        "mrrAtK": 0.5,
         "evidencePrecisionAtK": 0.2,
         "evidenceRecall": 1,
         "requiredEvidenceCoverage": 0.6
@@ -530,10 +530,10 @@
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 807,
-        "meanKeywordCoverage": 0.9,
-        "meanGroundingRatio": 0.5247,
-        "meanFactualScore": 0.7123
+        "avgAnswerChars": 594,
+        "meanKeywordCoverage": 0.6,
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 0.8
       }
     },
     {
@@ -547,12 +547,15 @@
         "risk__03-velocity-rules"
       ],
       "firstRoute": [
-        "risk"
+        "risk",
+        "payments"
       ],
       "firstRetrievedNodeIds": [
         "risk__03-velocity-rules:4:0",
+        "risk__03-velocity-rules:5:0",
         "risk__03-velocity-rules:1:0",
-        "risk__03-velocity-rules:3:0"
+        "payments__01-ledger-posting:2:0",
+        "payments__01-ledger-posting:4:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
@@ -561,16 +564,16 @@
         "mrrAtK": 1,
         "evidencePrecisionAtK": 0.6,
         "evidenceRecall": 1,
-        "requiredEvidenceCoverage": 0.3333
+        "requiredEvidenceCoverage": 0.6667
       },
       "factuality": {
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 1031,
-        "meanKeywordCoverage": 0.6,
-        "meanGroundingRatio": 0.537,
-        "meanFactualScore": 0.5685
+        "avgAnswerChars": 724,
+        "meanKeywordCoverage": 0.4,
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 0.7
       }
     },
     {
@@ -590,29 +593,29 @@
         "payments"
       ],
       "firstRetrievedNodeIds": [
-        "risk__01-risk-score-model:3:0",
-        "risk__02-fraud-signals:3:0",
-        "risk__03-velocity-rules:3:0",
-        "compliance__01-kyc-policy:3:0",
-        "compliance__02-aml-monitoring:3:0"
+        "risk__04-limit-management:4:0",
+        "risk__04-limit-management:2:0",
+        "risk__04-limit-management:5:0",
+        "compliance__01-kyc-policy:2:0",
+        "compliance__02-aml-monitoring:4:0"
       ],
       "relevance": {
         "routeTop1Accuracy": 1,
         "routeRecallAtN": 1,
-        "hitAtK": 0,
-        "mrrAtK": 0,
-        "evidencePrecisionAtK": 0,
-        "evidenceRecall": 0,
+        "hitAtK": 1,
+        "mrrAtK": 1,
+        "evidencePrecisionAtK": 0.6,
+        "evidenceRecall": 0.5,
         "requiredEvidenceCoverage": 0.4
       },
       "factuality": {
         "enabled": true,
         "askRuns": 2,
         "emptyAnswers": 0,
-        "avgAnswerChars": 577,
+        "avgAnswerChars": 761,
         "meanKeywordCoverage": 0.6,
-        "meanGroundingRatio": 0.4576,
-        "meanFactualScore": 0.5288
+        "meanGroundingRatio": 1,
+        "meanFactualScore": 0.8
       }
     }
   ],
@@ -623,5 +626,5 @@
     "meanFactualScore": 0.6,
     "snapshotRoundtrip": true
   },
-  "overallPass": false
+  "overallPass": true
 }

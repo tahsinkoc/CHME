@@ -135,10 +135,6 @@ async function main(): Promise<void> {
       assert.ok(scopedPrompt.includes('QUESTION:'), 'Scoped prompt question bolumu eksik')
       console.log(`Scoped prompt chars: ${scopedPrompt.length}`)
 
-      if (dryRun) {
-        continue
-      }
-
       const globalStart = Date.now()
       const globalAnswer = await engine.ask(scenario.question, {
         topCollections: 3,
@@ -147,14 +143,34 @@ async function main(): Promise<void> {
       })
       const globalElapsed = Date.now() - globalStart
       assert.ok(globalAnswer.trim().length > 0, `Global ask bos cevap dondu: ${scenario.name}`)
-      console.log(`Global answer time: ${globalElapsed}ms`)
+      console.log(`Global grounded answer time: ${globalElapsed}ms`)
       console.log(`Global answer:\n${globalAnswer}`)
 
       const scopedStart = Date.now()
       const scopedAnswer = await engine.ask(firstCollection, scenario.question)
       const scopedElapsed = Date.now() - scopedStart
       assert.ok(scopedAnswer.trim().length > 0, `Scoped ask bos cevap dondu: ${scenario.name}`)
-      console.log(`Scoped answer time: ${scopedElapsed}ms`)
+      console.log(`Scoped grounded answer time: ${scopedElapsed}ms`)
+
+      if (dryRun) {
+        continue
+      }
+
+      const llmGlobalStart = Date.now()
+      const llmGlobalAnswer = await engine.askWithLLM(scenario.question, {
+        topCollections: 3,
+        topKPerCollection: 3,
+        maxContextChars: 2000
+      })
+      const llmGlobalElapsed = Date.now() - llmGlobalStart
+      assert.ok(llmGlobalAnswer.trim().length > 0, `Global LLM ask bos cevap dondu: ${scenario.name}`)
+      console.log(`Global LLM answer time: ${llmGlobalElapsed}ms`)
+
+      const llmScopedStart = Date.now()
+      const llmScopedAnswer = await engine.askWithLLM(firstCollection, scenario.question)
+      const llmScopedElapsed = Date.now() - llmScopedStart
+      assert.ok(llmScopedAnswer.trim().length > 0, `Scoped LLM ask bos cevap dondu: ${scenario.name}`)
+      console.log(`Scoped LLM answer time: ${llmScopedElapsed}ms`)
     }
 
     console.log('\nDetailed Ollama scenario test passed')

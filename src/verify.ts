@@ -234,15 +234,29 @@ async function testAskOverloadsAndProviderFallbacks(): Promise<void> {
     topKPerCollection: 3,
     maxContextChars: 1500
   })
-  assert.equal(globalAnswer, '')
+  assert.ok(globalAnswer.trim().length > 0)
 
   const scopedAnswer = await engine.ask(firstCollection as string, 'What is the main topic of the files?')
-  assert.equal(scopedAnswer, '')
+  assert.ok(scopedAnswer.trim().length > 0)
+
+  const localLlmAnswer = await engine.askWithLLM('What is the main topic of the files?', {
+    topCollections: 3,
+    topKPerCollection: 3,
+    maxContextChars: 1000
+  })
+  assert.equal(localLlmAnswer, '')
 
   engine.setProvider('openai')
   engine.setOpenAIBaseUrl('http://127.0.0.1:1/v1')
 
-  const openaiAnswer = await engine.ask('What is the main topic of the files?', {
+  const deterministicOpenAIAnswer = await engine.ask('What is the main topic of the files?', {
+    topCollections: 2,
+    topKPerCollection: 2,
+    maxContextChars: 1000
+  })
+  assert.ok(deterministicOpenAIAnswer.trim().length > 0)
+
+  const openaiAnswer = await engine.askWithLLM('What is the main topic of the files?', {
     topCollections: 2,
     topKPerCollection: 2,
     maxContextChars: 1000

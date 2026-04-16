@@ -9,6 +9,8 @@
 
 CHME is a **compact, in-memory, hierarchical memory orchestration engine** written in TypeScript. It provides a structured memory system for Large Language Models (LLM) and automatically extracts, indexes, and queries information from markdown-based documents.
 
+By default, `ask()` is now **deterministic and evidence-grounded**, so you can use the engine without configuring any model endpoint. When you want free-form generation on top of the retrieved context, use `askWithLLM()`.
+
 ## Core Flow
 
 ```
@@ -25,6 +27,7 @@ CHME is a **compact, in-memory, hierarchical memory orchestration engine** writt
 | **Multi-Collection Support** | Manages multiple topic domains in isolated collections |
 | **Auto-Routing** | Routes queries to correct collections via regex-based rules |
 | **Keyword Indexing** | Section-aware chunk-level search |
+| **Grounded Answers by Default** | `ask()` returns extractive, evidence-backed answers without requiring an LLM |
 | **Local LLM Support** | Ollama integration for local inference |
 | **Cloud LLM Support** | OpenAI-compatible APIs (Mistral, OpenAI, etc.) |
 | **Snapshot Persistence** | Compressed state saving in `.chme.json.gz` format |
@@ -43,8 +46,6 @@ import { MemoryEngine } from './src/MemoryEngine'
 
 async function main() {
   const engine = new MemoryEngine({
-    provider: 'local',
-    model: 'qwen2.5:7b',
     snapshotDir: './snapshots'
   })
 
@@ -54,7 +55,8 @@ async function main() {
   // Save snapshots for fast restart
   await engine.saveSnapshots()
 
-  // Ask questions without specifying collection
+  // Ask questions without specifying collection.
+  // This path is grounded and does not require an LLM endpoint.
   const answer = await engine.ask('What is the main topic of the files?')
   console.log(answer)
 }
@@ -72,6 +74,16 @@ const engine = new MemoryEngine({
   localUrl: 'http://localhost:11434/api/generate',
   model: 'qwen2.5:7b',
   temperature: 0
+})
+```
+
+Use the LLM path explicitly when you want a generated answer instead of the default grounded extractive response:
+
+```typescript
+const answer = await engine.askWithLLM('Summarize the main risks across the files.', {
+  topCollections: 3,
+  topKPerCollection: 3,
+  maxContextChars: 2000
 })
 ```
 
